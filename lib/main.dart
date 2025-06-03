@@ -4,9 +4,11 @@ import 'screens/primera_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/regiter_screen.dart';
 import 'utils/app_colors.dart';
+import 'package:sqflite/sqflite.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await databaseFactory.setDatabasesPath(await getDatabasesPath());
 
   // Inicializar Firebase (lo configuraremos después)
   // await Firebase.initializeApp();

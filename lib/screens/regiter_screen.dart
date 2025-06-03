@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
+import '../domain/User.dart';
+import '../database/DatabaseHelper.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -17,6 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _ageController = TextEditingController();
   final _weightController = TextEditingController();
   final _heightController = TextEditingController();
+  final _dbHelper = DatabaseHelper();
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -27,6 +30,43 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _isLoading = false;
   bool _acceptTerms = false;
   String _selectedGender = 'Masculino';
+
+
+  Future<void> _register() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+
+      try {
+        final user = User(
+          email: _emailController.text,
+          password: _passwordController.text,
+          createdAt: DateTime.now(),
+        );
+
+        await _dbHelper.registerUser(user);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Usuario registrado exitosamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context);
+      } catch (e) {
+        _showError('Error al registrar: $e');
+      } finally {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
 
   @override
   void initState() {
@@ -581,7 +621,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         ],
       ),
       child: ElevatedButton(
-        onPressed: (_isLoading || !_acceptTerms) ? null : _handleRegister,
+        onPressed: (_isLoading || !_acceptTerms) ? null : _register,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
@@ -605,7 +645,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  void _handleRegister() async {
+  /*void _handleRegister() async {
     if (_formKey.currentState!.validate()) {
       if (!_acceptTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -648,5 +688,5 @@ class _RegisterScreenState extends State<RegisterScreen>
         });
       }
     }
-  }
+  }*/
 }

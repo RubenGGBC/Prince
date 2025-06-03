@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
+import '../screens/home_screen.dart';
+import '../domain/User.dart';
+import '../database/DatabaseHelper.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -12,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _dbHelper = DatabaseHelper();
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -19,6 +23,40 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+
+  Future<void> _login() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+
+      try {
+        final user = await _dbHelper.loginUser(
+          _emailController.text,
+          _passwordController.text,
+        );
+
+        if (user != null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(user: user),
+            ),
+          );
+        } else {
+          _showError('Usuario o contraseña incorrectos');
+        }
+      } catch (e) {
+        _showError('Error al iniciar sesión: $e');
+      } finally {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
 
   @override
   void initState() {
@@ -426,7 +464,7 @@ class _LoginScreenState extends State<LoginScreen>
         ],
       ),
       child: ElevatedButton(
-        onPressed: _isLoading ? null : _handleLogin,
+        onPressed: _isLoading ? null : _login,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
@@ -484,7 +522,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  void _handleLogin() async {
+  /*void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -517,5 +555,5 @@ class _LoginScreenState extends State<LoginScreen>
         });
       }
     }
-  }
+  }*/
 }
