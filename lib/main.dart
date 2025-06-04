@@ -5,9 +5,19 @@ import 'screens/login_screen.dart';
 import 'screens/regiter_screen.dart';
 import 'utils/app_colors.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';  // ← NUEVO: Para Windows
+import 'dart:io';  // ← NUEVO: Para detectar plataforma
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ← NUEVO: Configuración específica para aplicaciones de escritorio
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    // Inicializar SQLite para aplicaciones de escritorio
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
   await databaseFactory.setDatabasesPath(await getDatabasesPath());
 
   // Inicializar Firebase (lo configuraremos después)
