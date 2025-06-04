@@ -10,13 +10,13 @@ import 'dart:io';  // ← NUEVO: Para detectar plataforma
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   // ← NUEVO: Configuración específica para aplicaciones de escritorio
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     // Inicializar SQLite para aplicaciones de escritorio
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+  debugDatabasePath();
 
   await databaseFactory.setDatabasesPath(await getDatabasesPath());
 
@@ -24,6 +24,13 @@ void main() async {
   // await Firebase.initializeApp();
 
   runApp(Prince());
+}
+
+void debugDatabasePath() async {
+  var databasesPath = await getDatabasesPath();
+  print('=== RUTA BASE DE DATOS ===');
+  print(databasesPath);
+  print('========================');
 }
 
 class Prince extends StatelessWidget {
