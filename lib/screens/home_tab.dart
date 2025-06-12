@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
+import '../domain/exercise.dart';
+import '../database/DatabaseHelper.dart';
+import 'exercises_tab.dart';
+import 'añadir_rutina.dart';
 
 class HomeTab extends StatefulWidget {
   @override
@@ -9,7 +13,10 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   final PageController _pageController = PageController();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
   int _currentTipIndex = 0;
+  List<Exercise> _recentExercises = [];
+  bool _isLoading = true;
 
   final List<Map<String, String>> _fitnessQuotes = [
     {
@@ -29,8 +36,22 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void initState() {
     super.initState();
-    // Auto-scroll quotes every 5 seconds
+    _loadRecentExercises();
     Future.delayed(Duration(seconds: 5), _autoScrollQuotes);
+  }
+
+  Future<void> _loadRecentExercises() async {
+    setState(() => _isLoading = true);
+    try {
+      final exercises = await _dbHelper.getAllExercises();
+      setState(() {
+        _recentExercises = exercises.take(3).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      print('Error cargando ejercicios: $e');
+    }
   }
 
   void _autoScrollQuotes() {
@@ -55,32 +76,16 @@ class _HomeTabState extends State<HomeTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               _buildHeader(),
-
               SizedBox(height: 30),
-
-              // Quick Stats Cards
               _buildQuickStats(),
-
               SizedBox(height: 30),
-
-              // Motivational Quote Carousel
               _buildQuoteCarousel(),
-
               SizedBox(height: 30),
-
-              // Today's Summary
               _buildTodaySummary(),
-
               SizedBox(height: 30),
-
-              // Quick Actions
               _buildQuickActions(),
-
               SizedBox(height: 30),
-
-              // Recent Activity
               _buildRecentActivity(),
             ],
           ),
@@ -105,7 +110,7 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ),
             Text(
-              'Usuario', // TODO: Reemplazar con nombre real del usuario
+              'Usuario',
               style: GoogleFonts.poppins(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -410,15 +415,46 @@ class _HomeTabState extends State<HomeTab> {
           children: [
             Expanded(
               child: _buildActionButton(
-                'Entrenar',
-                Icons.play_circle_filled,
+                'Ver Ejercicios',
+                Icons.fitness_center,
                 AppColors.pastelGreen,
                     () {
-                  // TODO: Navegar a ejercicios
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ExercisesTab()),
+                  );
+                },
+              ),
+            ),
+            SizedBox(width: 15),
+            Expanded(
+              child: _buildActionButton(
+                'Crear Rutina',
+                Icons.playlist_add,
+                AppColors.pastelPurple,
+                    () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CrearRutinaScreen()),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                'Mis Rutinas',
+                Icons.library_books,
+                AppColors.pastelBlue,
+                    () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Función de entrenamiento próximamente'),
-                      backgroundColor: AppColors.pastelGreen,
+                      content: Text('Lista de rutinas próximamente'),
+                      backgroundColor: AppColors.pastelBlue,
                     ),
                   );
                 },
@@ -431,7 +467,6 @@ class _HomeTabState extends State<HomeTab> {
                 Icons.restaurant,
                 AppColors.pastelOrange,
                     () {
-                  // TODO: Navegar a nutrición
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Función de nutrición próximamente'),

@@ -99,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                       // Nombre de la app
                       Text(
-                        'FitLife Pro',
+                        'Prince',
                         style: GoogleFonts.poppins(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,

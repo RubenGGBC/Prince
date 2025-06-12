@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
+import '../domain/exercise.dart';
+import '../database/DatabaseHelper.dart';
 
 class ExercisesTab extends StatefulWidget {
   @override
@@ -8,67 +10,57 @@ class ExercisesTab extends StatefulWidget {
 }
 
 class _ExercisesTabState extends State<ExercisesTab> {
-  // 📝 VARIABLES - Aquí puedes agregar tus datos
+  final DatabaseHelper _dbHelper = DatabaseHelper();
   String _selectedCategory = 'Todos';
   final List<String> _categories = ['Todos', 'Pecho', 'Espalda', 'Piernas', 'Hombros', 'Brazos', 'Cardio'];
+  List<Exercise> _exercises = [];
+  List<Exercise> _filteredExercises = [];
+  bool _isLoading = true;
 
-  // 📝 DATOS DE EJERCICIOS - Reemplaza esto con tu base de datos
-  final List<Map<String, dynamic>> _exercises = [
-    {
-      'name': 'Push-ups',
-      'category': 'Pecho',
-      'duration': '3 sets x 15 reps',
-      'difficulty': 'Intermedio',
-      'calories': '45 cal',
-      'icon': Icons.fitness_center,
-      'color': AppColors.pastelPink,
-    },
-    {
-      'name': 'Squats',
-      'category': 'Piernas',
-      'duration': '4 sets x 20 reps',
-      'difficulty': 'Principiante',
-      'calories': '60 cal',
-      'icon': Icons.accessibility_new,
-      'color': AppColors.pastelBlue,
-    },
-    {
-      'name': 'Pull-ups',
-      'category': 'Espalda',
-      'duration': '3 sets x 8 reps',
-      'difficulty': 'Avanzado',
-      'calories': '55 cal',
-      'icon': Icons.fitness_center,
-      'color': AppColors.pastelGreen,
-    },
-    {
-      'name': 'Planks',
-      'category': 'Core',
-      'duration': '3 sets x 60 seg',
-      'difficulty': 'Intermedio',
-      'calories': '35 cal',
-      'icon': Icons.timer,
-      'color': AppColors.pastelPurple,
-    },
-    {
-      'name': 'Burpees',
-      'category': 'Cardio',
-      'duration': '4 sets x 10 reps',
-      'difficulty': 'Avanzado',
-      'calories': '80 cal',
-      'icon': Icons.directions_run,
-      'color': AppColors.pastelOrange,
-    },
-    {
-      'name': 'Lunges',
-      'category': 'Piernas',
-      'duration': '3 sets x 12 reps',
-      'difficulty': 'Intermedio',
-      'calories': '50 cal',
-      'icon': Icons.accessibility_new,
-      'color': AppColors.pastelBlue,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadExercises();
+  }
+
+  Future<void> _loadExercises() async {
+    setState(() => _isLoading = true);
+    try {
+      final exercises = await _dbHelper.getAllExercises();
+      setState(() {
+        _exercises = exercises;
+        _filteredExercises = exercises;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      print('Error cargando ejercicios: $e');
+    }
+  }
+
+  void _filterExercises() {
+    setState(() {
+      if (_selectedCategory == 'Todos') {
+        _filteredExercises = _exercises;
+      } else {
+        _filteredExercises = _exercises.where((exercise) =>
+        exercise.grupoMuscular == _selectedCategory).toList();
+      }
+    });
+  }
+
+  void _searchExercises(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filterExercises();
+      } else {
+        _filteredExercises = _exercises.where((exercise) =>
+        exercise.nombre.toLowerCase().contains(query.toLowerCase()) ||
+            exercise.grupoMuscular.toLowerCase().contains(query.toLowerCase())
+        ).toList();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,21 +69,14 @@ class _ExercisesTabState extends State<ExercisesTab> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header con búsqueda
             _buildHeader(),
-
-            // Categorías horizontales
             _buildCategories(),
-
-            // Lista de ejercicios
             Expanded(child: _buildExercisesList()),
           ],
         ),
       ),
-      // Botón flotante para agregar ejercicio
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // 🔧 TU LÓGICA: Agregar nuevo ejercicio
           _showAddExerciseDialog();
         },
         backgroundColor: AppColors.pastelPink,
@@ -116,7 +101,6 @@ class _ExercisesTabState extends State<ExercisesTab> {
           ),
           SizedBox(height: 16),
 
-          // Barra de búsqueda
           Container(
             decoration: BoxDecoration(
               color: AppColors.cardBlack,
@@ -138,10 +122,7 @@ class _ExercisesTabState extends State<ExercisesTab> {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.all(16),
               ),
-              onChanged: (value) {
-                // 🔧 TU LÓGICA: Filtrar ejercicios por búsqueda
-                print("Buscando: $value");
-              },
+              onChanged: _searchExercises,
             ),
           ),
         ],
@@ -165,8 +146,7 @@ class _ExercisesTabState extends State<ExercisesTab> {
               setState(() {
                 _selectedCategory = category;
               });
-              // 🔧 TU LÓGICA: Filtrar ejercicios por categoría
-              print("Categoría seleccionada: $category");
+              _filterExercises();
             },
             child: Container(
               margin: EdgeInsets.only(right: 12),
@@ -194,23 +174,61 @@ class _ExercisesTabState extends State<ExercisesTab> {
   }
 
   Widget _buildExercisesList() {
-    // 🔧 TU LÓGICA: Aquí filtrarías los ejercicios según categoría y búsqueda
-    final filteredExercises = _exercises.where((exercise) {
-      if (_selectedCategory == 'Todos') return true;
-      return exercise['category'] == _selectedCategory;
-    }).toList();
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.pastelBlue),
+        ),
+      );
+    }
 
-    return ListView.builder(
-      padding: EdgeInsets.all(20),
-      itemCount: filteredExercises.length,
-      itemBuilder: (context, index) {
-        final exercise = filteredExercises[index];
-        return _buildExerciseCard(exercise);
-      },
+    if (_filteredExercises.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.fitness_center,
+              size: 64,
+              color: AppColors.grey,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No hay ejercicios',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                color: AppColors.grey,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Agrega tu primer ejercicio',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppColors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadExercises,
+      child: ListView.builder(
+        padding: EdgeInsets.all(20),
+        itemCount: _filteredExercises.length,
+        itemBuilder: (context, index) {
+          final exercise = _filteredExercises[index];
+          return _buildExerciseCard(exercise);
+        },
+      ),
     );
   }
 
-  Widget _buildExerciseCard(Map<String, dynamic> exercise) {
+  Widget _buildExerciseCard(Exercise exercise) {
+    final color = _getColorByMuscleGroup(exercise.grupoMuscular);
+
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -218,7 +236,7 @@ class _ExercisesTabState extends State<ExercisesTab> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: exercise['color'].withOpacity(0.1),
+            color: color.withOpacity(0.1),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -229,37 +247,34 @@ class _ExercisesTabState extends State<ExercisesTab> {
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: () {
-            // 🔧 TU LÓGICA: Navegar a detalles del ejercicio
             _openExerciseDetails(exercise);
           },
           child: Padding(
             padding: EdgeInsets.all(20),
             child: Row(
               children: [
-                // Icono del ejercicio
                 Container(
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: exercise['color'].withOpacity(0.1),
+                    color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Icon(
-                    exercise['icon'],
-                    color: exercise['color'],
+                    _getIconByMuscleGroup(exercise.grupoMuscular),
+                    color: color,
                     size: 30,
                   ),
                 ),
 
                 SizedBox(width: 16),
 
-                // Información del ejercicio
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        exercise['name'],
+                        exercise.nombre,
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -268,7 +283,7 @@ class _ExercisesTabState extends State<ExercisesTab> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        exercise['duration'],
+                        '${exercise.series} series × ${exercise.repeticiones} reps',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           color: AppColors.grey,
@@ -277,26 +292,40 @@ class _ExercisesTabState extends State<ExercisesTab> {
                       SizedBox(height: 8),
                       Row(
                         children: [
-                          _buildChip(exercise['difficulty'], _getDifficultyColor(exercise['difficulty'])),
+                          _buildChip(exercise.grupoMuscular, color),
                           SizedBox(width: 8),
-                          _buildChip(exercise['calories'], AppColors.pastelOrange),
+                          _buildChip('${exercise.peso}kg', AppColors.pastelOrange),
+                          SizedBox(width: 8),
+                          _buildChip('${exercise.volumenTotal.toStringAsFixed(0)}kg total', AppColors.pastelGreen),
                         ],
                       ),
                     ],
                   ),
                 ),
 
-                // Botón de acción
-                IconButton(
-                  onPressed: () {
-                    // 🔧 TU LÓGICA: Iniciar ejercicio o agregar a rutina
-                    _startExercise(exercise);
-                  },
-                  icon: Icon(
-                    Icons.play_circle_filled,
-                    color: exercise['color'],
-                    size: 32,
-                  ),
+                Column(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        _startExercise(exercise);
+                      },
+                      icon: Icon(
+                        Icons.play_circle_filled,
+                        color: color,
+                        size: 32,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        _deleteExercise(exercise);
+                      },
+                      icon: Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                        size: 24,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -324,34 +353,141 @@ class _ExercisesTabState extends State<ExercisesTab> {
     );
   }
 
-  Color _getDifficultyColor(String difficulty) {
-    switch (difficulty) {
-      case 'Principiante':
-        return AppColors.pastelGreen;
-      case 'Intermedio':
-        return AppColors.pastelOrange;
-      case 'Avanzado':
-        return AppColors.pastelPink;
-      default:
-        return AppColors.grey;
+  Color _getColorByMuscleGroup(String grupo) {
+    switch (grupo) {
+      case 'Pecho': return AppColors.pastelPink;
+      case 'Espalda': return AppColors.pastelGreen;
+      case 'Piernas': return AppColors.pastelBlue;
+      case 'Hombros': return AppColors.pastelPurple;
+      case 'Brazos': return AppColors.pastelOrange;
+      case 'Cardio': return Colors.red;
+      default: return AppColors.grey;
     }
   }
 
-  // 🔧 MÉTODOS PARA TU LÓGICA - Implementa estos métodos con tu lógica de negocio
+  IconData _getIconByMuscleGroup(String grupo) {
+    switch (grupo) {
+      case 'Pecho': return Icons.fitness_center;
+      case 'Espalda': return Icons.fitness_center;
+      case 'Piernas': return Icons.accessibility_new;
+      case 'Hombros': return Icons.fitness_center;
+      case 'Brazos': return Icons.fitness_center;
+      case 'Cardio': return Icons.directions_run;
+      default: return Icons.fitness_center;
+    }
+  }
 
   void _showAddExerciseDialog() {
-    // 🔧 TU LÓGICA: Mostrar diálogo para agregar ejercicio
+    final _nombreController = TextEditingController();
+    final _seriesController = TextEditingController();
+    final _repsController = TextEditingController();
+    final _pesoController = TextEditingController();
+    final _notasController = TextEditingController();
+    String _selectedMuscleGroup = 'Pecho';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBlack,
         title: Text(
-          'Agregar Ejercicio',
+          'Nuevo Ejercicio',
           style: GoogleFonts.poppins(color: AppColors.white),
         ),
-        content: Text(
-          'Aquí implementarías tu formulario para agregar ejercicios',
-          style: GoogleFonts.poppins(color: AppColors.grey),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nombreController,
+                style: GoogleFonts.poppins(color: AppColors.white),
+                decoration: InputDecoration(
+                  labelText: 'Nombre',
+                  labelStyle: GoogleFonts.poppins(color: AppColors.grey),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.grey),
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedMuscleGroup,
+                dropdownColor: AppColors.cardBlack,
+                style: GoogleFonts.poppins(color: AppColors.white),
+                decoration: InputDecoration(
+                  labelText: 'Grupo Muscular',
+                  labelStyle: GoogleFonts.poppins(color: AppColors.grey),
+                ),
+                items: ['Pecho', 'Espalda', 'Piernas', 'Hombros', 'Brazos', 'Cardio']
+                    .map((grupo) => DropdownMenuItem(
+                  value: grupo,
+                  child: Text(grupo),
+                ))
+                    .toList(),
+                onChanged: (value) {
+                  _selectedMuscleGroup = value!;
+                },
+              ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _seriesController,
+                      keyboardType: TextInputType.number,
+                      style: GoogleFonts.poppins(color: AppColors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Series',
+                        labelStyle: GoogleFonts.poppins(color: AppColors.grey),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: AppColors.grey),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: TextField(
+                      controller: _repsController,
+                      keyboardType: TextInputType.number,
+                      style: GoogleFonts.poppins(color: AppColors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Repeticiones',
+                        labelStyle: GoogleFonts.poppins(color: AppColors.grey),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: AppColors.grey),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: _pesoController,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                style: GoogleFonts.poppins(color: AppColors.white),
+                decoration: InputDecoration(
+                  labelText: 'Peso (kg)',
+                  labelStyle: GoogleFonts.poppins(color: AppColors.grey),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.grey),
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: _notasController,
+                style: GoogleFonts.poppins(color: AppColors.white),
+                decoration: InputDecoration(
+                  labelText: 'Notas (opcional)',
+                  labelStyle: GoogleFonts.poppins(color: AppColors.grey),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.grey),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -359,10 +495,43 @@ class _ExercisesTabState extends State<ExercisesTab> {
             child: Text('Cancelar', style: TextStyle(color: AppColors.grey)),
           ),
           TextButton(
-            onPressed: () {
-              // 🔧 TU LÓGICA: Guardar ejercicio en la base de datos
-              Navigator.pop(context);
-              print("Guardar ejercicio en BD");
+            onPressed: () async {
+              if (_nombreController.text.isNotEmpty &&
+                  _seriesController.text.isNotEmpty &&
+                  _repsController.text.isNotEmpty &&
+                  _pesoController.text.isNotEmpty) {
+
+                final now = DateTime.now();
+                final exercise = Exercise(
+                  grupoMuscular: _selectedMuscleGroup,
+                  nombre: _nombreController.text,
+                  horaInicio: now.subtract(Duration(minutes: 30)),
+                  horaFin: now,
+                  repeticiones: int.parse(_repsController.text),
+                  series: int.parse(_seriesController.text),
+                  peso: double.parse(_pesoController.text),
+                  notas: _notasController.text.isNotEmpty ? _notasController.text : null,
+                );
+
+                try {
+                  await _dbHelper.addExercise(exercise);
+                  Navigator.pop(context);
+                  _loadExercises();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Ejercicio agregado'),
+                      backgroundColor: AppColors.pastelGreen,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al agregar ejercicio'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: Text('Guardar', style: TextStyle(color: AppColors.pastelBlue)),
           ),
@@ -371,27 +540,83 @@ class _ExercisesTabState extends State<ExercisesTab> {
     );
   }
 
-  void _openExerciseDetails(Map<String, dynamic> exercise) {
-    // 🔧 TU LÓGICA: Navegar a pantalla de detalles del ejercicio
-    print("Abrir detalles de: ${exercise['name']}");
-
-    // Ejemplo de navegación a otra pantalla:
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => ExerciseDetailScreen(exercise: exercise),
-    //   ),
-    // );
+  void _openExerciseDetails(Exercise exercise) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBlack,
+        title: Text(
+          exercise.nombre,
+          style: GoogleFonts.poppins(color: AppColors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Grupo: ${exercise.grupoMuscular}', style: GoogleFonts.poppins(color: AppColors.grey)),
+            Text('Series: ${exercise.series}', style: GoogleFonts.poppins(color: AppColors.grey)),
+            Text('Repeticiones: ${exercise.repeticiones}', style: GoogleFonts.poppins(color: AppColors.grey)),
+            Text('Peso: ${exercise.peso}kg', style: GoogleFonts.poppins(color: AppColors.grey)),
+            Text('Volumen total: ${exercise.volumenTotal}kg', style: GoogleFonts.poppins(color: AppColors.grey)),
+            Text('Duración: ${exercise.duracionFormateada}', style: GoogleFonts.poppins(color: AppColors.grey)),
+            if (exercise.notas != null && exercise.notas!.isNotEmpty)
+              Text('Notas: ${exercise.notas}', style: GoogleFonts.poppins(color: AppColors.grey)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cerrar', style: TextStyle(color: AppColors.pastelBlue)),
+          ),
+        ],
+      ),
+    );
   }
 
-  void _startExercise(Map<String, dynamic> exercise) {
-    // 🔧 TU LÓGICA: Iniciar entrenamiento o agregar a rutina
-    print("Iniciar ejercicio: ${exercise['name']}");
-
+  void _startExercise(Exercise exercise) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Iniciando ${exercise['name']}'),
-        backgroundColor: exercise['color'],
+        content: Text('Iniciando ${exercise.nombre}'),
+        backgroundColor: _getColorByMuscleGroup(exercise.grupoMuscular),
+      ),
+    );
+  }
+
+  void _deleteExercise(Exercise exercise) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBlack,
+        title: Text(
+          'Eliminar Ejercicio',
+          style: GoogleFonts.poppins(color: AppColors.white),
+        ),
+        content: Text(
+          '¿Estás seguro de eliminar ${exercise.nombre}?',
+          style: GoogleFonts.poppins(color: AppColors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar', style: TextStyle(color: AppColors.grey)),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (exercise.id != null) {
+                await _dbHelper.deleteExercise(exercise.id!);
+                Navigator.pop(context);
+                _loadExercises();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Ejercicio eliminado'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
