@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:untitled2/screens/home_tab.dart';
 import '../utils/app_colors.dart';
 import '../screens/home_screen.dart';
 import '../domain/User.dart';
@@ -38,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen>
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => HomeScreen(user: user),
+              builder: (context) => HomeTab(),
             ),
           );
         } else {
