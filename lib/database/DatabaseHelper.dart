@@ -31,6 +31,7 @@ class DatabaseHelper {
   }
 
   Future<void> _onCreate(Database db, int version) async {
+    // Crear tabla de usuarios
     await db.execute('''
      CREATE TABLE users(
        id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,6 +41,7 @@ class DatabaseHelper {
      )
    ''');
 
+    // Crear tabla de ejercicios
     await db.execute('''
      CREATE TABLE exercises(
        id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,6 +57,7 @@ class DatabaseHelper {
      )
    ''');
 
+    // Crear tabla de rutinas
     await db.execute('''
      CREATE TABLE rutinas(
        id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,6 +69,12 @@ class DatabaseHelper {
        fecha_creacion TEXT NOT NULL
      )
    ''');
+
+    // 🔥 NUEVO: Insertar ejercicios predefinidos cuando se crea la BD
+    print('📝 Insertando ejercicios predefinidos...');
+    await _insertPredefinedExercises(db);
+    await _insertPredefinedRoutines(db);
+    print('✅ Ejercicios y rutinas predefinidos insertados');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -96,6 +105,303 @@ class DatabaseHelper {
          fecha_creacion TEXT NOT NULL
        )
      ''');
+
+      // Insertar ejercicios predefinidos también en upgrade
+      await _insertPredefinedExercises(db);
+      await _insertPredefinedRoutines(db);
+    }
+  }
+
+  // 🔥 NUEVO MÉTODO: Insertar ejercicios predefinidos
+  Future<void> _insertPredefinedExercises(Database db) async {
+    final predefinedExercises = [
+      // PECHO 💪
+      {
+        'grupo_muscular': 'Pecho',
+        'nombre': 'Press banca',
+        'peso_sugerido': 60.0,
+        'series': 4,
+        'repeticiones': 10
+      },
+      {
+        'grupo_muscular': 'Pecho',
+        'nombre': 'Press inclinado',
+        'peso_sugerido': 50.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+      {
+        'grupo_muscular': 'Pecho',
+        'nombre': 'Flexiones',
+        'peso_sugerido': 0.0,
+        'series': 3,
+        'repeticiones': 15
+      },
+      {
+        'grupo_muscular': 'Pecho',
+        'nombre': 'Aperturas con mancuernas',
+        'peso_sugerido': 20.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+      {
+        'grupo_muscular': 'Pecho',
+        'nombre': 'Press con mancuernas',
+        'peso_sugerido': 30.0,
+        'series': 4,
+        'repeticiones': 10
+      },
+
+      // ESPALDA 🏋️
+      {
+        'grupo_muscular': 'Espalda',
+        'nombre': 'Dominadas',
+        'peso_sugerido': 0.0,
+        'series': 3,
+        'repeticiones': 8
+      },
+      {
+        'grupo_muscular': 'Espalda',
+        'nombre': 'Remo con barra',
+        'peso_sugerido': 40.0,
+        'series': 4,
+        'repeticiones': 10
+      },
+      {
+        'grupo_muscular': 'Espalda',
+        'nombre': 'Jalones al pecho',
+        'peso_sugerido': 35.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+      {
+        'grupo_muscular': 'Espalda',
+        'nombre': 'Peso muerto',
+        'peso_sugerido': 80.0,
+        'series': 4,
+        'repeticiones': 6
+      },
+      {
+        'grupo_muscular': 'Espalda',
+        'nombre': 'Remo con mancuerna',
+        'peso_sugerido': 25.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+
+      // PIERNAS 🦵
+      {
+        'grupo_muscular': 'Piernas',
+        'nombre': 'Sentadillas',
+        'peso_sugerido': 70.0,
+        'series': 4,
+        'repeticiones': 12
+      },
+      {
+        'grupo_muscular': 'Piernas',
+        'nombre': 'Prensa de piernas',
+        'peso_sugerido': 100.0,
+        'series': 3,
+        'repeticiones': 15
+      },
+      {
+        'grupo_muscular': 'Piernas',
+        'nombre': 'Extensiones de cuádriceps',
+        'peso_sugerido': 30.0,
+        'series': 3,
+        'repeticiones': 15
+      },
+      {
+        'grupo_muscular': 'Piernas',
+        'nombre': 'Curl femoral',
+        'peso_sugerido': 25.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+      {
+        'grupo_muscular': 'Piernas',
+        'nombre': 'Zancadas',
+        'peso_sugerido': 20.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+
+      // HOMBROS 🤸
+      {
+        'grupo_muscular': 'Hombros',
+        'nombre': 'Press militar',
+        'peso_sugerido': 30.0,
+        'series': 4,
+        'repeticiones': 10
+      },
+      {
+        'grupo_muscular': 'Hombros',
+        'nombre': 'Elevaciones laterales',
+        'peso_sugerido': 12.0,
+        'series': 3,
+        'repeticiones': 15
+      },
+      {
+        'grupo_muscular': 'Hombros',
+        'nombre': 'Elevaciones frontales',
+        'peso_sugerido': 10.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+      {
+        'grupo_muscular': 'Hombros',
+        'nombre': 'Pájaros',
+        'peso_sugerido': 8.0,
+        'series': 3,
+        'repeticiones': 15
+      },
+      {
+        'grupo_muscular': 'Hombros',
+        'nombre': 'Press con mancuernas',
+        'peso_sugerido': 15.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+
+      // BRAZOS 💪
+      {
+        'grupo_muscular': 'Brazos',
+        'nombre': 'Curl de bíceps',
+        'peso_sugerido': 15.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+      {
+        'grupo_muscular': 'Brazos',
+        'nombre': 'Press francés',
+        'peso_sugerido': 20.0,
+        'series': 3,
+        'repeticiones': 10
+      },
+      {
+        'grupo_muscular': 'Brazos',
+        'nombre': 'Fondos en paralelas',
+        'peso_sugerido': 0.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+      {
+        'grupo_muscular': 'Brazos',
+        'nombre': 'Curl martillo',
+        'peso_sugerido': 12.0,
+        'series': 3,
+        'repeticiones': 12
+      },
+      {
+        'grupo_muscular': 'Brazos',
+        'nombre': 'Tríceps en polea',
+        'peso_sugerido': 20.0,
+        'series': 3,
+        'repeticiones': 15
+      },
+
+      // CARDIO 🏃
+      {
+        'grupo_muscular': 'Cardio',
+        'nombre': 'Burpees',
+        'peso_sugerido': 0.0,
+        'series': 3,
+        'repeticiones': 10
+      },
+      {
+        'grupo_muscular': 'Cardio',
+        'nombre': 'Mountain climbers',
+        'peso_sugerido': 0.0,
+        'series': 3,
+        'repeticiones': 20
+      },
+      {
+        'grupo_muscular': 'Cardio',
+        'nombre': 'Jumping jacks',
+        'peso_sugerido': 0.0,
+        'series': 3,
+        'repeticiones': 30
+      },
+      {
+        'grupo_muscular': 'Cardio',
+        'nombre': 'High knees',
+        'peso_sugerido': 0.0,
+        'series': 3,
+        'repeticiones': 20
+      },
+    ];
+
+    final now = DateTime.now();
+    for (var exerciseData in predefinedExercises) {
+      await db.insert('exercises', {
+        'grupo_muscular': exerciseData['grupo_muscular'],
+        'nombre': exerciseData['nombre'],
+        'hora_inicio': now.subtract(Duration(minutes: 30)).toIso8601String(),
+        'hora_fin': now.toIso8601String(),
+        'repeticiones': exerciseData['repeticiones'],
+        'series': exerciseData['series'],
+        'peso': exerciseData['peso_sugerido'],
+        'notas': 'Ejercicio predefinido',
+        'fecha_creacion': now.toIso8601String(),
+      });
+    }
+  }
+
+  // 🔥 NUEVO MÉTODO: Insertar rutinas predefinidas
+  Future<void> _insertPredefinedRoutines(Database db) async {
+    final predefinedRoutines = [
+      {
+        'nombre': 'Push (Empuje)',
+        'descripcion': 'Pecho, hombros y tríceps - Día de empuje completo',
+        'ejercicio_ids': '1,2,5,16,20,22', // Press banca, press inclinado, press mancuernas, press militar, press francés, tríceps polea
+        'duracion_estimada': 75,
+        'categoria': 'Fuerza',
+        'fecha_creacion': DateTime.now().toIso8601String(),
+      },
+      {
+        'nombre': 'Pull (Tracción)',
+        'descripcion': 'Espalda y bíceps - Día de tracción completo',
+        'ejercicio_ids': '6,7,8,9,10,21,24', // Dominadas, remo barra, jalones, peso muerto, remo mancuerna, curl bíceps, curl martillo
+        'duracion_estimada': 70,
+        'categoria': 'Fuerza',
+        'fecha_creacion': DateTime.now().toIso8601String(),
+      },
+      {
+        'nombre': 'Legs (Piernas)',
+        'descripcion': 'Tren inferior completo - Cuádriceps, glúteos y isquios',
+        'ejercicio_ids': '11,12,13,14,15', // Sentadillas, prensa, extensiones, curl femoral, zancadas
+        'duracion_estimada': 80,
+        'categoria': 'Fuerza',
+        'fecha_creacion': DateTime.now().toIso8601String(),
+      },
+      {
+        'nombre': 'Full Body Principiante',
+        'descripcion': 'Rutina completa para empezar en el gimnasio',
+        'ejercicio_ids': '3,6,11,16,21', // Flexiones, dominadas, sentadillas, press militar, curl bíceps
+        'duracion_estimada': 45,
+        'categoria': 'Principiante',
+        'fecha_creacion': DateTime.now().toIso8601String(),
+      },
+      {
+        'nombre': 'HIIT Cardio Quema Grasa',
+        'descripcion': 'Alta intensidad para quemar calorías rápidamente',
+        'ejercicio_ids': '26,27,28,29,3,23', // Burpees, mountain climbers, jumping jacks, high knees, flexiones, fondos
+        'duracion_estimada': 30,
+        'categoria': 'Cardio',
+        'fecha_creacion': DateTime.now().toIso8601String(),
+      },
+      {
+        'nombre': 'Upper Body (Tren Superior)',
+        'descripcion': 'Enfoque completo en pecho, espalda, hombros y brazos',
+        'ejercicio_ids': '1,6,16,17,21,22', // Press banca, dominadas, press militar, elevaciones laterales, curl bíceps, press francés
+        'duracion_estimada': 65,
+        'categoria': 'Fuerza',
+        'fecha_creacion': DateTime.now().toIso8601String(),
+      },
+    ];
+
+    for (var routine in predefinedRoutines) {
+      await db.insert('rutinas', routine);
     }
   }
 
@@ -155,7 +461,7 @@ class DatabaseHelper {
 
   Future<List<Exercise>> getAllExercises() async {
     final db = await database;
-    final result = await db.query('exercises');
+    final result = await db.query('exercises', orderBy: 'grupo_muscular, nombre');
     return result.map((map) => Exercise.fromMap(map)).toList();
   }
 
@@ -171,7 +477,7 @@ class DatabaseHelper {
 
   Future<List<Rutina>> getAllRutinas() async {
     final db = await database;
-    final result = await db.query('rutinas');
+    final result = await db.query('rutinas', orderBy: 'fecha_creacion DESC');
     return result.map((map) => Rutina.fromMap(map)).toList();
   }
 
@@ -195,152 +501,14 @@ class DatabaseHelper {
     );
     return result.map((map) => Exercise.fromMap(map)).toList();
   }
-  Future<void> _insertPredefinedExercises(Database db) async {
-    final predefinedExercises = [
-      // PECHO
-      {
-        'grupo_muscular': 'Pecho',
-        'nombre': 'Press banca',
-        'peso_sugerido': 60.0
-      },
-      {
-        'grupo_muscular': 'Pecho',
-        'nombre': 'Press inclinado',
-        'peso_sugerido': 50.0
-      },
-      {'grupo_muscular': 'Pecho', 'nombre': 'Flexiones', 'peso_sugerido': 0.0},
-      {'grupo_muscular': 'Pecho', 'nombre': 'Aperturas', 'peso_sugerido': 20.0},
 
-      // ESPALDA
-      {
-        'grupo_muscular': 'Espalda',
-        'nombre': 'Dominadas',
-        'peso_sugerido': 0.0
-      },
-      {
-        'grupo_muscular': 'Espalda',
-        'nombre': 'Remo con barra',
-        'peso_sugerido': 40.0
-      },
-      {'grupo_muscular': 'Espalda', 'nombre': 'Jalones', 'peso_sugerido': 35.0},
-      {
-        'grupo_muscular': 'Espalda',
-        'nombre': 'Peso muerto',
-        'peso_sugerido': 80.0
-      },
-
-      // PIERNAS
-      {
-        'grupo_muscular': 'Piernas',
-        'nombre': 'Sentadillas',
-        'peso_sugerido': 70.0
-      },
-      {'grupo_muscular': 'Piernas', 'nombre': 'Prensa', 'peso_sugerido': 100.0},
-      {
-        'grupo_muscular': 'Piernas',
-        'nombre': 'Extensiones',
-        'peso_sugerido': 30.0
-      },
-      {
-        'grupo_muscular': 'Piernas',
-        'nombre': 'Curl femoral',
-        'peso_sugerido': 25.0
-      },
-
-      // HOMBROS
-      {
-        'grupo_muscular': 'Hombros',
-        'nombre': 'Press militar',
-        'peso_sugerido': 30.0
-      },
-      {
-        'grupo_muscular': 'Hombros',
-        'nombre': 'Elevaciones laterales',
-        'peso_sugerido': 12.0
-      },
-      {
-        'grupo_muscular': 'Hombros',
-        'nombre': 'Elevaciones frontales',
-        'peso_sugerido': 10.0
-      },
-      {'grupo_muscular': 'Hombros', 'nombre': 'Pajaros', 'peso_sugerido': 8.0},
-
-      // BRAZOS
-      {
-        'grupo_muscular': 'Brazos',
-        'nombre': 'Curl biceps',
-        'peso_sugerido': 15.0
-      },
-      {
-        'grupo_muscular': 'Brazos',
-        'nombre': 'Press frances',
-        'peso_sugerido': 20.0
-      },
-      {'grupo_muscular': 'Brazos', 'nombre': 'Fondos', 'peso_sugerido': 0.0},
-      {'grupo_muscular': 'Brazos', 'nombre': 'Martillo', 'peso_sugerido': 12.0},
-    ];
-
-    final now = DateTime.now();
-    for (var exerciseData in predefinedExercises) {
-      await db.insert('exercises', {
-        'grupo_muscular': exerciseData['grupo_muscular'],
-        'nombre': exerciseData['nombre'],
-        'hora_inicio': now.subtract(Duration(minutes: 30)).toIso8601String(),
-        'hora_fin': now.toIso8601String(),
-        'repeticiones': 12,
-        'series': 3,
-        'peso': exerciseData['peso_sugerido'],
-        'notas': 'Ejercicio predefinido',
-        'fecha_creacion': now.toIso8601String(),
-      });
-    }
+  // 🔥 NUEVO MÉTODO: Limpiar y reinsertar ejercicios (útil para desarrollo)
+  Future<void> resetPredefinedData() async {
+    final db = await database;
+    await db.delete('exercises');
+    await db.delete('rutinas');
+    await _insertPredefinedExercises(db);
+    await _insertPredefinedRoutines(db);
+    print('✅ Datos predefinidos reiniciados');
   }
-  Future<void> _insertPredefinedRoutines(Database db) async {
-    final predefinedRoutines = [
-      {
-        'nombre': 'Push (Empuje)',
-        'descripcion': 'Pecho, hombros y tríceps',
-        'ejercicio_ids': '1,2,3,13,14,18', // IDs de ejercicios de empuje
-        'duracion_estimada': 60,
-        'categoria': 'Fuerza',
-        'fecha_creacion': DateTime.now().toIso8601String(),
-      },
-      {
-        'nombre': 'Pull (Tracción)',
-        'descripcion': 'Espalda y bíceps',
-        'ejercicio_ids': '5,6,7,8,17,20', // IDs de ejercicios de tracción
-        'duracion_estimada': 55,
-        'categoria': 'Fuerza',
-        'fecha_creacion': DateTime.now().toIso8601String(),
-      },
-      {
-        'nombre': 'Legs (Piernas)',
-        'descripcion': 'Cuádriceps, glúteos y pantorrillas',
-        'ejercicio_ids': '9,10,11,12', // IDs de ejercicios de piernas
-        'duracion_estimada': 70,
-        'categoria': 'Fuerza',
-        'fecha_creacion': DateTime.now().toIso8601String(),
-      },
-      {
-        'nombre': 'Full Body Principiante',
-        'descripcion': 'Rutina completa para empezar',
-        'ejercicio_ids': '3,5,9,13,17', // Flexiones, dominadas, sentadillas, press militar, curl
-        'duracion_estimada': 45,
-        'categoria': 'Principiante',
-        'fecha_creacion': DateTime.now().toIso8601String(),
-      },
-      {
-        'nombre': 'HIIT Cardio',
-        'descripcion': 'Alta intensidad para quemar grasa',
-        'ejercicio_ids': '3,9,19', // Flexiones, sentadillas, fondos
-        'duracion_estimada': 30,
-        'categoria': 'Cardio',
-        'fecha_creacion': DateTime.now().toIso8601String(),
-      },
-    ];
-
-    for (var routine in predefinedRoutines) {
-      await db.insert('rutinas', routine);
-    }
-  }
-  }
+}
