@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../domain/User.dart';
+import '../domain/user.dart';
 
 class HomeScreen extends StatelessWidget {
   final User user;
