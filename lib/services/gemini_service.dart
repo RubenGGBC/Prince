@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 
 class GeminiService {
   // 🔑 API Key de Gemini - REEMPLAZA con tu clave real
-  static const String _apiKey = 'AIzaSyAbcsyqxzJH9cCeykckik9T-sQt0IkqvvQ';
-  static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+  static const String _apiKey = 'AIzaSyAUQ0wYn4MQTWX04ztNAHnE265cpwjUf2U';
+  static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
   // 🎯 PROMPT DIFERENCIADOR (mismo que antes)
   static const String _systemPrompt = '''
@@ -173,7 +173,7 @@ RESPONDE SIEMPRE EN ESPAÑOL, adaptando tu nivel de detalle según la experienci
 
     try {
       // 🔍 VERIFICAR API KEY
-      if (_apiKey == 'AIzaSyAbcsyqxzJH9cCeykckik9T-sQt0IkqvvQ') {
+      if (_apiKey == 'AIzaSyAUQ0wYn4MQTWX04ztNAHnE265cpwjUf2U') {
         print('❌ ERROR: API Key no configurada');
         return '''❌ **Error de configuración**
 
@@ -520,7 +520,7 @@ $_systemPrompt
     print('🧪 === TEST DE CONEXIÓN GEMINI ===');
 
     final results = <String, dynamic>{
-      'api_key_configured': _apiKey != 'TU_API_KEY_AQUI',
+      'api_key_configured': _apiKey != 'AIzaSyAUQ0wYn4MQTWX04ztNAHnE265cpwjUf2U',
       'api_key_length': _apiKey.length,
       'base_url': _baseUrl,
       'test_timestamp': DateTime.now().toIso8601String(),
@@ -550,7 +550,7 @@ $_systemPrompt
   Map<String, dynamic> getDebugInfo() {
     return {
       'service_version': '2.0.0-debug',
-      'api_configured': _apiKey != 'TU_API_KEY_AQUI',
+      'api_configured': _apiKey != 'AIzaSyAUQ0wYn4MQTWX04ztNAHnE265cpwjUf2U',
       'api_key_format': _apiKey.startsWith('AIza') ? 'válido' : 'inválido',
       'base_url': _baseUrl,
       'prompt_length': _systemPrompt.length,

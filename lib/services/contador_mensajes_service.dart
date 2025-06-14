@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 class MessageCounterService {
   static const String _messageCountKey = 'daily_message_count';
   static const String _lastUsageDateKey = 'last_usage_date';
-  static const int _dailyLimit = 5;
+  static const int _dailyLimit = 10;
 
   static final MessageCounterService _instance = MessageCounterService._internal();
   factory MessageCounterService() => _instance;
