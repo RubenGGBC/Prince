@@ -173,7 +173,7 @@ RESPONDE SIEMPRE EN ESPAÑOL, adaptando tu nivel de detalle según la experienci
 
     try {
       // 🔍 VERIFICAR API KEY
-      if (_apiKey == 'TU_API_KEY_AQUI') {
+      if (_apiKey == 'AIzaSyAbcsyqxzJH9cCeykckik9T-sQt0IkqvvQ') {
         print('❌ ERROR: API Key no configurada');
         return '''❌ **Error de configuración**
 
