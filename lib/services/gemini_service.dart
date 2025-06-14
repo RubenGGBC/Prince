@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class GeminiService {
   // 🔑 API Key de Gemini - REEMPLAZA con tu clave real
-  static const String _apiKey = 'TU_API_KEY_AQUI';
+  static const String _apiKey = 'AIzaSyAbcsyqxzJH9cCeykckik9T-sQt0IkqvvQ';
   static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 
   // 🎯 PROMPT DIFERENCIADOR (mismo que antes)
