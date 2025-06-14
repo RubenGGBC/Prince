@@ -6,6 +6,7 @@ import '../database/DatabaseHelper.dart';
 import 'exercises_tab.dart';
 import 'añadir_rutina.dart';
 import 'workout_session_screen.dart';
+import 'prince_ai_chat_screen.dart';
 
 class HomeTab extends StatefulWidget {
   @override
@@ -72,9 +73,8 @@ class _HomeTabState extends State<HomeTab> {
     return Scaffold(
       backgroundColor: AppColors.primaryBlack,
       body: SafeArea(
-        child: LayoutBuilder( // 👈 LayoutBuilder para responsive
+        child: LayoutBuilder(
           builder: (context, constraints) {
-            // 📱 Determinar si es móvil, tablet o desktop
             final isTablet = constraints.maxWidth > 600;
             final isDesktop = constraints.maxWidth > 1024;
 
@@ -86,21 +86,35 @@ class _HomeTabState extends State<HomeTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 📱 Header
                   _buildHeader(isTablet, isDesktop),
-                  SizedBox(height: isTablet ? 40 : 30),
+                  SizedBox(height: isTablet ? 30 : 20),
+
+                  // 🤖 BOTÓN DESTACADO - PrinceIA
+                  _buildPrinceAIButton(isTablet, isDesktop),
+                  SizedBox(height: isTablet ? 30 : 20),
 
                   // 💪 BOTÓN PRINCIPAL - Empezar Entrenamiento
                   _buildStartWorkoutButton(isTablet, isDesktop),
                   SizedBox(height: isTablet ? 40 : 30),
 
+                  // 📊 Quick Stats
                   _buildQuickStats(isTablet, isDesktop),
                   SizedBox(height: isTablet ? 40 : 30),
+
+                  // 💭 Quote Carousel
                   _buildQuoteCarousel(isTablet, isDesktop),
                   SizedBox(height: isTablet ? 40 : 30),
+
+                  // 📈 Today Summary
                   _buildTodaySummary(isTablet, isDesktop),
                   SizedBox(height: isTablet ? 40 : 30),
+
+                  // ⚡ Quick Actions
                   _buildQuickActions(isTablet, isDesktop),
                   SizedBox(height: isTablet ? 40 : 30),
+
+                  // 📜 Recent Activity
                   _buildRecentActivity(isTablet, isDesktop),
                 ],
               ),
@@ -111,6 +125,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  // 📱 HEADER
   Widget _buildHeader(bool isTablet, bool isDesktop) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -168,7 +183,133 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 🚀 NUEVO WIDGET - Botón principal para empezar entrenamiento
+  // 🤖 BOTÓN DESTACADO - PrinceIA
+  Widget _buildPrinceAIButton(bool isTablet, bool isDesktop) {
+    return Container(
+      width: double.infinity,
+      height: isDesktop ? 100 : (isTablet ? 90 : 80),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.pastelPurple,
+            AppColors.pastelPink,
+            AppColors.pastelBlue,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.pastelPink.withOpacity(0.4),
+            blurRadius: 15,
+            spreadRadius: 3,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PrinceAIChatScreen())
+            );
+          },
+          child: Padding(
+            padding: EdgeInsets.all(isTablet ? 20 : 16),
+            child: Row(
+              children: [
+                // 🤖 Icono de IA
+                Container(
+                  width: isDesktop ? 50 : (isTablet ? 45 : 40),
+                  height: isDesktop ? 50 : (isTablet ? 45 : 40),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.white.withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.smart_toy,
+                    color: AppColors.white,
+                    size: isDesktop ? 28 : (isTablet ? 24 : 20),
+                  ),
+                ),
+
+                SizedBox(width: isTablet ? 16 : 12),
+
+                // 📝 Texto principal
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'PrinceIA',
+                            style: GoogleFonts.poppins(
+                              fontSize: isDesktop ? 22 : (isTablet ? 20 : 18),
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.white,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'BETA',
+                              style: GoogleFonts.poppins(
+                                fontSize: isDesktop ? 10 : (isTablet ? 9 : 8),
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Tu entrenador personal con IA • 5 mensajes diarios',
+                        style: GoogleFonts.poppins(
+                          fontSize: isDesktop ? 14 : (isTablet ? 13 : 12),
+                          color: AppColors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ➡️ Icono de chat
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline,
+                    color: AppColors.white,
+                    size: isTablet ? 24 : 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 🚀 BOTÓN PRINCIPAL - Empezar Entrenamiento
   Widget _buildStartWorkoutButton(bool isTablet, bool isDesktop) {
     return Container(
       width: double.infinity,
@@ -204,7 +345,6 @@ class _HomeTabState extends State<HomeTab> {
             padding: EdgeInsets.all(isTablet ? 24 : 20),
             child: Row(
               children: [
-                // 🎯 Icono animado
                 Container(
                   width: isDesktop ? 60 : (isTablet ? 50 : 40),
                   height: isDesktop ? 60 : (isTablet ? 50 : 40),
@@ -221,7 +361,6 @@ class _HomeTabState extends State<HomeTab> {
 
                 SizedBox(width: isTablet ? 20 : 16),
 
-                // 📝 Texto principal
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,7 +385,6 @@ class _HomeTabState extends State<HomeTab> {
                   ),
                 ),
 
-                // ➡️ Flecha
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   color: AppColors.white,
@@ -260,8 +398,8 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  // 📊 QUICK STATS
   Widget _buildQuickStats(bool isTablet, bool isDesktop) {
-    // 📱 En móvil: 3 columnas | 📱 En tablet: 3 columnas | 💻 En desktop: 4 columnas
     final crossAxisCount = isDesktop ? 4 : 3;
 
     return GridView.count(
@@ -302,7 +440,7 @@ class _HomeTabState extends State<HomeTab> {
           isTablet,
           isDesktop,
         ),
-        if (isDesktop) // 💻 En desktop mostramos una estadística extra
+        if (isDesktop)
           _buildStatCard(
             'Entrenamientos',
             '12',
@@ -408,6 +546,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  // 💭 QUOTE CAROUSEL
   Widget _buildQuoteCarousel(bool isTablet, bool isDesktop) {
     return Container(
       height: isDesktop ? 140 : (isTablet ? 130 : 120),
@@ -470,18 +609,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 🔧 Método para iniciar sesión de entrenamiento
-  void _startWorkoutSession() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WorkoutSessionScreen(), // 👈 Pantalla que crearemos
-      ),
-    );
-  }
-
-  // 📝 RESTO DE WIDGETS (adaptamos solo los tamaños, misma lógica)
-
+  // 📈 TODAY SUMMARY
   Widget _buildTodaySummary(bool isTablet, bool isDesktop) {
     return Container(
       padding: EdgeInsets.all(isDesktop ? 24 : (isTablet ? 22 : 20)),
@@ -516,7 +644,6 @@ class _HomeTabState extends State<HomeTab> {
           ),
           SizedBox(height: 16),
 
-          // 📱 Responsive: En móvil columna, en tablet/desktop fila
           if (isTablet || isDesktop)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -572,6 +699,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  // ⚡ QUICK ACTIONS
   Widget _buildQuickActions(bool isTablet, bool isDesktop) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,7 +714,6 @@ class _HomeTabState extends State<HomeTab> {
         ),
         SizedBox(height: 16),
 
-        // 📱 Responsive: En tablet/desktop 4 columnas, en móvil 2
         GridView.count(
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
@@ -668,6 +795,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
+  // 📜 RECENT ACTIVITY
   Widget _buildRecentActivity(bool isTablet, bool isDesktop) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -741,6 +869,17 @@ class _HomeTabState extends State<HomeTab> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // 🔧 MÉTODOS AUXILIARES
+
+  void _startWorkoutSession() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WorkoutSessionScreen(),
       ),
     );
   }

@@ -36,6 +36,14 @@ dependencies:
   crypto: ^3.0.3
   google_fonts: ^6.1.0
   firebase_core: ^2.30.0
+  http: ^1.1.2              # Para llamadas HTTP a Gemini API
+  shared_preferences: ^2.2.2 # Para guardar contador de mensajes
+  intl: ^0.19.0             # Para manejo de fechas
+  markdown_widget: ^2.3.2+6 # Para mostrar respuestas con formato
+
+    # 🎨 OPCIONAL: Para efectos visuales del chat
+  shimmer: ^3.0.0           # Efecto de carga
+  lottie: ^2.7.0           # Animaciones
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
