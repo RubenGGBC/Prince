@@ -73,23 +73,36 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo/Icono principal
+                      // 👑 CORONA AZUL PRINCIPAL
                       Container(
                         width: 120,
                         height: 120,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(30),
-                          gradient: AppColors.primaryGradient,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.pastelBlue,
+                              AppColors.pastelPurple,
+                              AppColors.pastelPink,
+                            ],
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.pastelPink.withOpacity(0.3),
-                              blurRadius: 20,
+                              color: AppColors.pastelBlue.withOpacity(0.4),
+                              blurRadius: 25,
                               spreadRadius: 5,
+                            ),
+                            BoxShadow(
+                              color: AppColors.pastelPurple.withOpacity(0.3),
+                              blurRadius: 15,
+                              spreadRadius: 2,
                             ),
                           ],
                         ),
                         child: Icon(
-                          Icons.fitness_center,
+                          Icons.workspace_premium, // ← CORONA AZUL
                           size: 60,
                           color: AppColors.white,
                         ),
@@ -128,7 +141,7 @@ class _SplashScreenState extends State<SplashScreen>
                         height: 50,
                         child: CircularProgressIndicator(
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.pastelPink,
+                            AppColors.pastelBlue, // ← Color azul
                           ),
                           strokeWidth: 3,
                         ),

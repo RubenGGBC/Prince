@@ -65,7 +65,7 @@ class _PrinceAIChatScreenState extends State<PrinceAIChatScreen>
   // 👋 Agregar mensaje de bienvenida
   void _addWelcomeMessage() {
     final welcomeMessage = ChatMessage.ai(
-        '''🤖 **¡Hola! Soy PrinceIA** 
+        '''👑 **¡Hola! Soy PrinceIA** 
 
 ¡Tu entrenador personal virtual! 💪
 
@@ -168,7 +168,7 @@ class _PrinceAIChatScreenState extends State<PrinceAIChatScreen>
     );
   }
 
-  // 📱 AppBar personalizada
+  // 📱 AppBar personalizada - CAMBIAR ICONO A CORONA
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: AppColors.surfaceBlack,
@@ -179,16 +179,18 @@ class _PrinceAIChatScreenState extends State<PrinceAIChatScreen>
       ),
       title: Row(
         children: [
-          // Avatar de PrinceIA
+          // 👑 AVATAR DE PRINCEAI CON CORONA
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: LinearGradient(
+                colors: [AppColors.pastelBlue, AppColors.pastelPurple],
+              ),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.smart_toy,
+              Icons.workspace_premium, // ← CORONA AZUL
               color: AppColors.white,
               size: 20,
             ),
@@ -307,7 +309,7 @@ class _PrinceAIChatScreenState extends State<PrinceAIChatScreen>
     );
   }
 
-  // 💭 Burbuja de mensaje individual
+  // 💭 Burbuja de mensaje individual - CAMBIAR ICONO A CORONA
   Widget _buildMessageBubble(ChatMessage message) {
     final isUser = message.type == MessageType.user;
     final isSystem = message.type == MessageType.system;
@@ -319,17 +321,19 @@ class _PrinceAIChatScreenState extends State<PrinceAIChatScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) ...[
-            // Avatar de la IA
+            // 👑 AVATAR DE LA IA CON CORONA
             Container(
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                gradient: isSystem ? null : AppColors.primaryGradient,
+                gradient: isSystem ? null : LinearGradient(
+                  colors: [AppColors.pastelBlue, AppColors.pastelPurple],
+                ),
                 color: isSystem ? AppColors.grey : null,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                message.getMessageIcon(),
+                isSystem ? Icons.info_outline : Icons.workspace_premium, // ← CORONA PARA IA
                 color: AppColors.white,
                 size: 16,
               ),
@@ -516,7 +520,9 @@ class _PrinceAIChatScreenState extends State<PrinceAIChatScreen>
           Container(
             decoration: BoxDecoration(
               gradient: _remainingMessages > 0 && !_isSending
-                  ? AppColors.primaryGradient
+                  ? LinearGradient(
+                colors: [AppColors.pastelBlue, AppColors.pastelPurple],
+              )
                   : null,
               color: _remainingMessages == 0 || _isSending
                   ? AppColors.grey.withOpacity(0.3)
@@ -545,7 +551,7 @@ class _PrinceAIChatScreenState extends State<PrinceAIChatScreen>
     );
   }
 
-  // 🚫 Estado vacío
+  // 🚫 Estado vacío - CAMBIAR ICONO A CORONA
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -555,11 +561,13 @@ class _PrinceAIChatScreenState extends State<PrinceAIChatScreen>
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: LinearGradient(
+                colors: [AppColors.pastelBlue, AppColors.pastelPurple],
+              ),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.smart_toy,
+              Icons.workspace_premium, // ← CORONA AZUL
               size: 40,
               color: AppColors.white,
             ),

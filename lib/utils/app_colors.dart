@@ -5,10 +5,41 @@ class AppColors {
   static const Color primaryBlack = Color(0xFF0D1117);     // Negro GitHub dark
   static const Color surfaceBlack = Color(0xFF161B22);     // Negro azulado
   static const Color cardBlack = Color(0xFF21262D);        // Gris oscuro azulado
+  static const Color primaryBlue = Color(0xFF2196F3);
+  static const Color darkBlue = Color(0xFF1976D2);
+  static const Color lightBlue = Color(0xFF64B5F6);
+  static const Color pastelBlue = Color(0xFF81D4FA);
 
+  // COLORES DE FONDO
+  static const Color backgroundDark = Color(0xFF121212);
+  static const Color surfaceDark = Color(0xFF1E1E1E);
+  static const Color cardDark = Color(0xFF2C2C2C);
+
+  // COLORES DE TEXTO
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color grey = Color(0xFF9E9E9E);
+  static const Color lightGrey = Color(0xFFE0E0E0);
+  static const Color darkGrey = Color(0xFF424242);
+
+  // COLORES DE ESTADO
+  static const Color success = Color(0xFF4CAF50);
+  static const Color warning = Color(0xFFFF9800);
+  static const Color error = Color(0xFFF44336);
+  static const Color info = Color(0xFF2196F3);
+
+  // COLORES PARA ML KIT
+  static const Color mlKitActive = Color(0xFF00E676);
+  static const Color mlKitInactive = Color(0xFF757575);
+  static const Color mlKitError = Color(0xFFFF5722);
+
+  // GRADIENTES
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryBlue, darkBlue],
+  );
   // "Colores pasteles" (ahora son tonos azules y blancos)
   static const Color pastelPink = Color(0xFF79C0FF);       // Azul claro brillante
-  static const Color pastelBlue = Color(0xFF58A6FF);       // Azul medio vibrante
   static const Color pastelGreen = Color(0xFFF0F6FF);      // Blanco azulado
   static const Color pastelPurple = Color(0xFF1F6FEB);     // Azul intenso
   static const Color pastelOrange = Color(0xFF388BFD);     // Azul eléctrico
@@ -28,21 +59,8 @@ class AppColors {
   static const Color darkGray = Color(0xFF334155);         // Gris oscuro
 
   // Colores básicos
-  static const Color white = Color(0xFFFFFFFF);            // Blanco puro
-  static const Color grey = Color(0xFF8B949E);             // Gris azulado
-  static const Color lightGrey = Color(0xFFD0D7DE);        // Gris claro azulado
-  static const Color darkGrey = Color(0xFF484F58);         // Gris oscuro azulado
 
-  // Gradientes azules elegantes
-  static const LinearGradient primaryGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF1F6FEB),    // Azul intenso
-      Color(0xFF58A6FF),    // Azul medio
-      Color(0xFF79C0FF),    // Azul claro
-    ],
-  );
+
 
   static const LinearGradient secondaryGradient = LinearGradient(
     begin: Alignment.topLeft,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
 import '../domain/exercise.dart';
+import '../domain/user.dart'; // ✅ IMPORTAR User
 import '../database/DatabaseHelper.dart';
 import 'exercises_tab.dart';
 import 'añadir_rutina.dart';
@@ -9,11 +10,17 @@ import 'workout_session_screen.dart';
 import 'prince_ai_chat_screen.dart';
 
 class HomeTab extends StatefulWidget {
+  // ✅ AGREGAR PARÁMETRO REQUERIDO User
+  final User user;
+
+  const HomeTab({
+    Key? key,
+    required this.user, // ← Usuario requerido desde login
+  }) : super(key: key);
+
   @override
   _HomeTabState createState() => _HomeTabState();
-
 }
-
 
 class _HomeTabState extends State<HomeTab> {
   // 🔄 PAGEVIEW INTERNO PARA SWIPE HACIA CHAT IA
@@ -42,6 +49,22 @@ class _HomeTabState extends State<HomeTab> {
       setState(() => _isLoading = false);
       print('Error cargando ejercicios: $e');
     }
+  }
+
+  // ✅ MÉTODO PARA EXTRAER NOMBRE DEL EMAIL
+  String _getUserDisplayName() {
+    // Si el email es "usuario@example.com", extraer "usuario"
+    String email = widget.user.email;
+    if (email.contains('@')) {
+      return email.split('@')[0].toLowerCase();
+    }
+    return email;
+  }
+
+  // ✅ MÉTODO PARA CAPITALIZAR PRIMERA LETRA
+  String _capitalizeFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
   }
 
   @override
@@ -116,8 +139,6 @@ class _HomeTabState extends State<HomeTab> {
               _buildStartWorkoutButton(isTablet, isDesktop),
               SizedBox(height: isTablet ? 40 : 30),
 
-              // 📜 Recent Activity
-              _buildRecentActivity(isTablet, isDesktop),
             ],
           ),
         );
@@ -125,7 +146,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // ✨ INDICADOR DE SWIPE HACIA IA
   Widget _buildSwipeHint(bool isTablet, bool isDesktop) {
     return Container(
       padding: EdgeInsets.all(isTablet ? 16 : 12),
@@ -139,18 +159,18 @@ class _HomeTabState extends State<HomeTab> {
       ),
       child: Row(
         children: [
-          // 🤖 Icono de IA pequeño
+          // 👑 CORONA AZUL EN LUGAR DE smart_toy
           Container(
             width: isDesktop ? 40 : (isTablet ? 36 : 32),
             height: isDesktop ? 40 : (isTablet ? 36 : 32),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.pastelPurple, AppColors.pastelPink],
+                colors: [AppColors.pastelBlue, AppColors.pastelPurple],
               ),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.smart_toy,
+              Icons.workspace_premium, // ← CORONA AZUL
               color: AppColors.white,
               size: isDesktop ? 20 : (isTablet ? 18 : 16),
             ),
@@ -193,7 +213,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 📍 INDICADOR DE PÁGINA (arriba a la derecha)
+  // 📍 INDICADOR DE PÁGINA (arriba a la derecha) - CAMBIAR ICONO A CORONA
   Widget _buildSwipeIndicator() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -228,7 +248,7 @@ class _HomeTabState extends State<HomeTab> {
           ),
           SizedBox(width: 6),
           Icon(
-            Icons.smart_toy,
+            Icons.workspace_premium, // ← CORONA AZUL
             color: AppColors.pastelPurple,
             size: 16,
           ),
@@ -237,8 +257,10 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 📱 HEADER (mantener igual pero sin notificaciones)
+  // 📱 HEADER - MOSTRAR NOMBRE DEL USUARIO + CORONA
   Widget _buildHeader(bool isTablet, bool isDesktop) {
+    final userName = _capitalizeFirst(_getUserDisplayName());
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -254,8 +276,9 @@ class _HomeTabState extends State<HomeTab> {
                   color: AppColors.grey,
                 ),
               ),
+              // ✅ MOSTRAR NOMBRE DEL USUARIO
               Text(
-                'Usuario',
+                userName,
                 style: GoogleFonts.poppins(
                   fontSize: isDesktop ? 36 : (isTablet ? 32 : 28),
                   fontWeight: FontWeight.bold,
@@ -273,7 +296,7 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ),
 
-        // 🔔 Botón de notificaciones (opcional)
+        // 👑 BOTÓN CORONA PARA IR AL CHAT IA
         GestureDetector(
           onTap: () {
             // Ir directamente al chat con IA
@@ -287,19 +310,19 @@ class _HomeTabState extends State<HomeTab> {
             padding: EdgeInsets.all(isTablet ? 16 : 12),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.pastelPurple, AppColors.pastelPink],
+                colors: [AppColors.pastelBlue, AppColors.pastelPurple],
               ),
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.pastelPurple.withOpacity(0.3),
+                  color: AppColors.pastelBlue.withOpacity(0.3),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
               ],
             ),
             child: Icon(
-              Icons.smart_toy,
+              Icons.workspace_premium, // ← CORONA AZUL
               color: AppColors.white,
               size: isTablet ? 28 : 24,
             ),
@@ -309,7 +332,7 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 📊 QUICK STATS COMPACTAS (igual que antes)
+  // 📊 QUICK STATS COMPACTAS (mantener igual)
   Widget _buildQuickStatsCompact(bool isTablet, bool isDesktop) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:untitled2/screens/home_tab.dart';
 import '../utils/app_colors.dart';
 import '../screens/home_screen.dart';
+import '../screens/home_tab.dart'; // ✅ IMPORTAR HomeTab
 import '../domain/user.dart';
 import '../database/DatabaseHelper.dart';
 
@@ -36,10 +36,11 @@ class _LoginScreenState extends State<LoginScreen>
         );
 
         if (user != null) {
+          // ✅ PASAR EL USUARIO AL HomeTab
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => HomeTab(),
+              builder: (context) => HomeTab(user: user), // ← Pasar usuario
             ),
           );
         } else {
@@ -125,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen>
                       children: [
                         SizedBox(height: 60),
 
-                        // Header
+                        // Header - CAMBIAR ICONO A CORONA
                         Center(
                           child: Column(
                             children: [
@@ -134,17 +135,19 @@ class _LoginScreenState extends State<LoginScreen>
                                 height: 80,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(20),
-                                  gradient: AppColors.primaryGradient,
+                                  gradient: LinearGradient(
+                                    colors: [AppColors.pastelBlue, AppColors.pastelPurple],
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.pastelPink.withOpacity(0.3),
+                                      color: AppColors.pastelBlue.withOpacity(0.3),
                                       blurRadius: 15,
                                       spreadRadius: 2,
                                     ),
                                   ],
                                 ),
                                 child: Icon(
-                                  Icons.fitness_center,
+                                  Icons.workspace_premium, // ← CORONA AZUL
                                   size: 40,
                                   color: AppColors.white,
                                 ),
@@ -455,10 +458,12 @@ class _LoginScreenState extends State<LoginScreen>
       height: 56,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: AppColors.primaryGradient,
+        gradient: LinearGradient(
+          colors: [AppColors.pastelBlue, AppColors.pastelPurple],
+        ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.pastelPink.withOpacity(0.3),
+            color: AppColors.pastelBlue.withOpacity(0.3),
             blurRadius: 15,
             spreadRadius: 2,
           ),
@@ -522,39 +527,4 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
-
-  /*void _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        // Simulación de login (reemplazaremos con Firebase después)
-        await Future.delayed(Duration(seconds: 2));
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('¡Login exitoso! Dashboard próximamente'),
-            backgroundColor: AppColors.pastelGreen,
-          ),
-        );
-
-        // TODO: Navegar al dashboard cuando lo creemos
-        // Navigator.pushReplacementNamed(context, '/dashboard');
-
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al iniciar sesión: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }*/
 }
