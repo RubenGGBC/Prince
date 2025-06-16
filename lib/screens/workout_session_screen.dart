@@ -1,15 +1,23 @@
-// lib/screens/workout_session_screen.dart - MODIFICADO CON ML KIT
+// lib/screens/workout_session_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:async';
-import 'dart:math' as math;
-import '../utils/app_colors.dart';
-import '../domain/exercise.dart';
+import 'package:camera/camera.dart';
+import '../core/app_colors.dart';
+import '../data/database_helper.dart';
 import '../domain/rutina.dart';
-import '../database/DatabaseHelper.dart';
-// 🆕 NUEVOS IMPORTS PARA ML KIT
+import '../domain/exercise.dart';
 import '../services/form_analysis_camera.dart';
 import '../models/form_feedback.dart';
+import '../models/form_score.dart';
+
+enum WorkoutPhase {
+  selectRoutine,
+  exerciseReady,
+  exerciseActive,
+  resting,
+  completed,
+}
 
 class WorkoutSessionScreen extends StatefulWidget {
   @override
@@ -18,56 +26,45 @@ class WorkoutSessionScreen extends StatefulWidget {
 
 class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     with TickerProviderStateMixin {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  // 📋 ESTADO DE LA SESIÓN (existente)
+  // 📊 Estado básico del workout
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  WorkoutPhase _currentPhase = WorkoutPhase.selectRoutine;
+  bool _isLoading = true;
+
+  // 🏋️ Rutinas y ejercicios
   List<Rutina> _availableRoutines = [];
   Rutina? _selectedRoutine;
   List<Exercise> _routineExercises = [];
-
-  // 🏋️ ESTADO DEL EJERCICIO ACTUAL (existente)
   int _currentExerciseIndex = 0;
   int _currentSet = 1;
-  Exercise? get _currentExercise => _routineExercises.isNotEmpty ? _routineExercises[_currentExerciseIndex] : null;
 
-  // ⏱️ ESTADO DEL CRONÓMETRO (existente)
+  // ⏱️ Control de tiempo
   Timer? _timer;
-  int _seconds = 0;
-  bool _isRunning = false;
-
-  // 😴 ESTADO DEL DESCANSO (existente)
   Timer? _restTimer;
-  int _restSeconds = 180;
+  bool _isRunning = false;
   bool _isResting = false;
+  int _seconds = 0;
+  int _restSeconds = 60;
 
-  // 📊 DATOS DEL SET ACTUAL (existente)
-  final _weightController = TextEditingController();
-  final _repsController = TextEditingController();
-
-  // 🎭 ANIMACIONES (existente)
+  // 🎨 Animaciones
   late AnimationController _pulseController;
-  late AnimationController _waveController;
   late Animation<double> _pulseAnimation;
+  late AnimationController _waveController;
   late Animation<double> _waveAnimation;
-
-  // 📱 ESTADOS DE UI (existente)
-  bool _isLoading = true;
-  WorkoutPhase _currentPhase = WorkoutPhase.selectRoutine;
-
-  // 🆕 ========== NUEVAS VARIABLES PARA ML KIT ==========
-
-  // 📹 Controlador de análisis de técnica
-  late FormAnalysisCamera _formAnalysisCamera;
-  bool _isCameraReady = false;
-  bool _isAnalyzingForm = false;
-
-  // 📊 Datos de técnica en tiempo real
-  FormScore? _currentFormScore;
-  FormFeedback? _lastSetFeedback;
-
-  // 🎯 Animación para el indicador de técnica
   late AnimationController _techniqueIndicatorController;
   late Animation<double> _techniqueIndicatorAnimation;
+
+  // 📱 Controles de input
+  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _repsController = TextEditingController();
+
+  // 🎥 Análisis de técnica con cámara
+  FormAnalysisCamera? _formAnalysisCamera;
+  bool _isCameraReady = false;
+  bool _isAnalyzingForm = false;
+  FormScore? _currentFormScore;
+  FormFeedback? _lastSetFeedback;
 
   // 📈 Estadísticas de la sesión
   List<FormFeedback> _sessionFeedbacks = [];
@@ -81,15 +78,16 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     _initializeFormAnalysis();
   }
 
-  // 🆕 NUEVO MÉTODO - Inicializar análisis de técnica
+  // 🆕 INICIALIZACIÓN COMPLETA DEL ANÁLISIS DE TÉCNICA
   Future<void> _initializeFormAnalysis() async {
     try {
       print('🎬 Inicializando sistema de análisis de técnica...');
 
       _formAnalysisCamera = FormAnalysisCamera();
 
-      // Configurar callbacks
-      _formAnalysisCamera.onFormScoreUpdate = (FormScore score) {
+      // 🔧 CALLBACKS DETALLADOS
+      _formAnalysisCamera!.onFormScoreUpdate = (FormScore score) {
+        print('📊 Score actualizado: ${score.score.toStringAsFixed(1)}');
         if (mounted) {
           setState(() {
             _currentFormScore = score;
@@ -98,13 +96,15 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         }
       };
 
-      _formAnalysisCamera.onError = (String error) {
+      _formAnalysisCamera!.onError = (String error) {
+        print('❌ ERROR DE CÁMARA: $error');
         if (mounted) {
           _showError('Error de cámara: $error');
         }
       };
 
-      _formAnalysisCamera.onSetComplete = (FormFeedback feedback) {
+      _formAnalysisCamera!.onSetComplete = (FormFeedback feedback) {
+        print('📋 Set completado - Puntuación: ${feedback.averageScore.toStringAsFixed(1)}');
         if (mounted) {
           setState(() {
             _lastSetFeedback = feedback;
@@ -113,23 +113,29 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         }
       };
 
-      // Inicializar cámara
-      final success = await _formAnalysisCamera.initialize();
+      // 🎥 INICIALIZAR CÁMARA
+      print('🎥 Intentando inicializar cámara...');
+      final success = await _formAnalysisCamera!.initialize();
+
+      print('📋 Resultado inicialización: $success');
+
       if (success && mounted) {
         setState(() {
           _isCameraReady = true;
         });
         print('✅ Sistema de análisis inicializado correctamente');
+      } else {
+        print('❌ FALLO EN INICIALIZACIÓN - _isCameraReady: false');
+        _showError('No se pudo inicializar la cámara');
       }
 
     } catch (e) {
-      print('❌ Error inicializando análisis: $e');
-      _showError('Error inicializando análisis de técnica');
+      print('❌ EXCEPCIÓN inicializando análisis: $e');
+      _showError('Error inicializando análisis de técnica: $e');
     }
   }
 
   void _setupAnimations() {
-    // Animaciones existentes...
     _pulseController = AnimationController(
       duration: Duration(milliseconds: 1000),
       vsync: this,
@@ -146,7 +152,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
       CurvedAnimation(parent: _waveController, curve: Curves.easeInOut),
     );
 
-    // 🆕 NUEVA ANIMACIÓN - Indicador de técnica
     _techniqueIndicatorController = AnimationController(
       duration: Duration(milliseconds: 300),
       vsync: this,
@@ -156,7 +161,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     );
   }
 
-  // 🆕 NUEVO MÉTODO - Actualizar indicador de técnica
   void _updateTechniqueIndicator(double score) {
     if (score >= 7.0) {
       _techniqueIndicatorController.forward();
@@ -165,7 +169,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     }
   }
 
-  // Métodos existentes de carga de rutinas...
   Future<void> _loadRoutines() async {
     try {
       final routines = await _dbHelper.getAllRutinas();
@@ -207,32 +210,36 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     }
   }
 
-  // 🆕 NUEVO MÉTODO - Configurar cámara para ejercicio actual
+  // 🆕 CONFIGURAR CÁMARA PARA EJERCICIO ESPECÍFICO
   Future<void> _setupCameraForCurrentExercise() async {
-    if (!_isCameraReady || _currentExercise == null) return;
+    if (!_isCameraReady || _currentExercise == null || _formAnalysisCamera == null) {
+      print('⚠️ No se puede configurar cámara - Ready: $_isCameraReady, Exercise: ${_currentExercise?.nombre}, Camera: ${_formAnalysisCamera != null}');
+      return;
+    }
 
     try {
       print('🎥 Configurando cámara para: ${_currentExercise!.nombre}');
 
-      await _formAnalysisCamera.setupCameraForExercise(_currentExercise!);
+      await _formAnalysisCamera!.setupCameraForExercise(_currentExercise!);
 
       // Mostrar instrucciones de posicionamiento
-      final instructions = _formAnalysisCamera.getCameraPositionInstructions();
+      final instructions = _formAnalysisCamera!.getCameraPositionInstructions();
       _showInfo('Posicionamiento: $instructions');
 
     } catch (e) {
       print('❌ Error configurando cámara: $e');
+      _showError('Error configurando cámara para el ejercicio');
     }
   }
 
-  // ⏱️ CONTROL DEL CRONÓMETRO - MODIFICADO
+  // ⏱️ CONTROL DEL CRONÓMETRO
   void _startSet() {
     setState(() {
       _currentPhase = WorkoutPhase.exerciseActive;
       _isRunning = true;
       _seconds = 0;
-      _currentFormScore = null; // Reset score anterior
-      _lastSetFeedback = null; // Reset feedback anterior
+      _currentFormScore = null;
+      _lastSetFeedback = null;
     });
 
     _pulseController.repeat(reverse: true);
@@ -248,10 +255,9 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     _startFormAnalysis();
   }
 
-  // 🆕 NUEVO MÉTODO - Iniciar análisis de técnica
   Future<void> _startFormAnalysis() async {
-    if (!_isCameraReady) {
-      print('⚠️ Cámara no lista para análisis');
+    if (!_isCameraReady || _formAnalysisCamera == null) {
+      print('⚠️ Cámara no lista para análisis - Ready: $_isCameraReady');
       return;
     }
 
@@ -262,7 +268,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         _isAnalyzingForm = true;
       });
 
-      await _formAnalysisCamera.startAnalysis();
+      await _formAnalysisCamera!.startAnalysis();
 
       print('✅ Análisis de técnica iniciado');
 
@@ -279,11 +285,13 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
 
     // 🆕 DETENER ANÁLISIS Y OBTENER FEEDBACK
     FormFeedback? feedback;
-    if (_isAnalyzingForm) {
+    if (_isAnalyzingForm && _formAnalysisCamera != null) {
       try {
-        print('🛑 Deteniendo análisis y generando feedback...');
-        feedback = await _formAnalysisCamera.stopAnalysis();
-        print('📊 Feedback obtenido: ${feedback.averageScore.toStringAsFixed(1)}/10');
+        feedback = await _formAnalysisCamera!.stopAnalysis();
+        setState(() {
+          _isAnalyzingForm = false;
+          _lastSetFeedback = feedback;
+        });
       } catch (e) {
         print('❌ Error obteniendo feedback: $e');
       }
@@ -291,14 +299,9 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
 
     setState(() {
       _isRunning = false;
-      _isAnalyzingForm = false;
       _currentPhase = WorkoutPhase.resting;
       _isResting = true;
-      _restSeconds = 180;
-      if (feedback != null) {
-        _lastSetFeedback = feedback;
-        _sessionFeedbacks.add(feedback);
-      }
+      _restSeconds = 60;
     });
 
     _startRestTimer();
@@ -311,11 +314,10 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
       });
 
       if (_restSeconds <= 0) {
-        _restTimer?.cancel();
+        timer.cancel();
         setState(() {
           _isResting = false;
           _currentPhase = WorkoutPhase.exerciseReady;
-          _lastSetFeedback = null; // Limpiar feedback para nuevo set
         });
         _checkNextSet();
       }
@@ -323,14 +325,12 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
   }
 
   void _checkNextSet() {
-    if (_currentExercise != null) {
-      if (_currentSet < _currentExercise!.series) {
-        setState(() {
-          _currentSet++;
-        });
-      } else {
-        _nextExercise();
-      }
+    if (_currentSet < 3) {
+      setState(() {
+        _currentSet++;
+      });
+    } else {
+      _nextExercise();
     }
   }
 
@@ -351,80 +351,131 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     setState(() {
       _currentPhase = WorkoutPhase.completed;
     });
-    _showWorkoutSummary();
   }
 
-  // 🆕 NUEVO MÉTODO - Mostrar resumen de entrenamiento
-  void _showWorkoutSummary() {
-    if (_sessionFeedbacks.isEmpty) return;
+  // 🎥 WIDGET DE PREVIEW DE CÁMARA CORREGIDO
+  Widget _buildCameraPreview() {
+    print('🎬 Construyendo preview de cámara...');
+    print('📋 _isCameraReady: $_isCameraReady');
+    print('📋 _formAnalysisCamera: ${_formAnalysisCamera != null}');
 
-    final avgScore = _sessionFeedbacks
-        .map((f) => f.averageScore)
-        .reduce((a, b) => a + b) / _sessionFeedbacks.length;
-
-    final totalReps = _sessionFeedbacks
-        .map((f) => f.totalReps)
-        .reduce((a, b) => a + b);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBlack,
-        title: Text(
-          '🏆 ¡Entrenamiento Completado!',
-          style: GoogleFonts.poppins(color: AppColors.white),
+    if (!_isCameraReady || _formAnalysisCamera?.cameraController == null) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: AppColors.cardBlack,
+          border: Border.all(color: AppColors.grey, width: 2),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Técnica Promedio: ${avgScore.toStringAsFixed(1)}/10',
-              style: GoogleFonts.poppins(color: AppColors.white, fontSize: 18),
-            ),
-            Text(
-              'Repeticiones Detectadas: $totalReps',
-              style: GoogleFonts.poppins(color: AppColors.grey),
-            ),
-            SizedBox(height: 16),
-            Text(
-              avgScore >= 8.0
-                  ? '¡Excelente técnica! 🔥'
-                  : avgScore >= 6.0
-                  ? '¡Buen trabajo! 💪'
-                  : 'Sigue practicando 🎯',
-              style: GoogleFonts.poppins(color: AppColors.pastelGreen),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: Text('Finalizar', style: TextStyle(color: AppColors.pastelBlue)),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: AppColors.pastelBlue,
+                strokeWidth: 2,
+              ),
+              SizedBox(height: 16),
+              Text(
+                _isCameraReady ? 'Configurando cámara...' : 'Inicializando cámara...',
+                style: GoogleFonts.poppins(
+                  color: AppColors.white,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: AppColors.backgroundDark,
-        body: Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      body: SafeArea(
-        child: _buildCurrentPhase(),
+    if (!_formAnalysisCamera!.cameraController!.value.isInitialized) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: AppColors.cardBlack,
+          border: Border.all(color: AppColors.pastelOrange, width: 2),
+        ),
+        child: Center(
+          child: Text(
+            'Cámara no inicializada',
+            style: GoogleFonts.poppins(color: AppColors.white),
+          ),
+        ),
+      );
+    }
+
+    // 🎥 PREVIEW REAL DE LA CÁMARA
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: AspectRatio(
+        aspectRatio: _formAnalysisCamera!.cameraController!.value.aspectRatio,
+        child: CameraPreview(_formAnalysisCamera!.cameraController!),
       ),
     );
   }
+
+  // 🎯 INDICADOR DE TÉCNICA EN TIEMPO REAL
+  Widget _buildTechniqueIndicator() {
+    if (_currentFormScore == null) {
+      return Container(
+        height: 40,
+        child: Center(
+          child: Text(
+            'Esperando análisis...',
+            style: GoogleFonts.poppins(
+              color: AppColors.grey,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final score = _currentFormScore!.score;
+    final color = score >= 8.0
+        ? AppColors.pastelGreen
+        : score >= 6.0
+        ? AppColors.pastelBlue
+        : AppColors.pastelOrange;
+
+    return AnimatedBuilder(
+      animation: _techniqueIndicatorAnimation,
+      builder: (context, child) {
+        return Container(
+          height: 40,
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.2 + (_techniqueIndicatorAnimation.value * 0.3)),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                score >= 8.0 ? Icons.check_circle :
+                score >= 6.0 ? Icons.thumb_up :
+                Icons.warning,
+                color: color,
+                size: 20,
+              ),
+              SizedBox(width: 8),
+              Text(
+                '${score.toStringAsFixed(1)}/10',
+                style: GoogleFonts.poppins(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // UI WIDGETS PRINCIPALES
 
   Widget _buildCurrentPhase() {
     switch (_currentPhase) {
@@ -433,15 +484,13 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
       case WorkoutPhase.exerciseReady:
         return _buildExerciseReady();
       case WorkoutPhase.exerciseActive:
-        return _buildExerciseActive(); // 🆕 MODIFICADO CON CÁMARA
+        return _buildExerciseActive();
       case WorkoutPhase.resting:
-        return _buildRestingState(); // 🆕 MODIFICADO CON FEEDBACK
+        return _buildRestingState();
       case WorkoutPhase.completed:
         return _buildWorkoutCompleted();
     }
   }
-
-  // MÉTODOS DE UI EXISTENTES (solo muestro los principales modificados)
 
   Widget _buildRoutineSelection() {
     return Padding(
@@ -487,17 +536,32 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     );
   }
 
-  // 🆕 EJERCICIO ACTIVO - MODIFICADO CON CÁMARA
+  Widget _buildExerciseReady() {
+    return Padding(
+      padding: EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _buildWorkoutHeader(),
+          SizedBox(height: 30),
+          _buildExerciseCard(),
+          SizedBox(height: 30),
+          _buildInputFields(),
+          Spacer(),
+          _buildReadyButton(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildExerciseActive() {
     return Padding(
       padding: EdgeInsets.all(20),
       child: Column(
         children: [
           _buildWorkoutHeader(),
-
           SizedBox(height: 20),
 
-          // 🆕 VISTA DE CÁMARA Y ANÁLISIS
+          // 🆕 VISTA PRINCIPAL CON CÁMARA
           Expanded(
             flex: 3,
             child: Row(
@@ -536,16 +600,14 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
                               width: 3,
                             ),
                           ),
-                          child: _isCameraReady
-                              ? _formAnalysisCamera.buildCameraPreview()
-                              : _buildCameraPlaceholder(),
+                          child: _buildCameraPreview(),
                         ),
                       ),
 
                       SizedBox(height: 12),
 
-                      // 🆕 Indicadores de técnica en tiempo real
-                      _buildTechniqueIndicators(),
+                      // Indicador de técnica en tiempo real
+                      _buildTechniqueIndicator(),
                     ],
                   ),
                 ),
@@ -555,139 +617,19 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
 
           SizedBox(height: 20),
 
-          // Botón terminar set
-          _buildFinishSetButton(),
+          // Botón para finalizar set
+          _buildFinishButton(),
         ],
       ),
     );
   }
 
-  // 🆕 PLACEHOLDER PARA CÁMARA
-  Widget _buildCameraPlaceholder() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceBlack,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.camera_alt, color: AppColors.grey, size: 48),
-            SizedBox(height: 16),
-            Text(
-              'Preparando cámara...',
-              style: GoogleFonts.poppins(color: AppColors.grey),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 🆕 INDICADORES DE TÉCNICA EN TIEMPO REAL
-  Widget _buildTechniqueIndicators() {
-    if (!_isAnalyzingForm || _currentFormScore == null) {
-      return Container(
-        height: 60,
-        child: Center(
-          child: Text(
-            _isAnalyzingForm ? 'Analizando técnica...' : 'Presiona ▶️ para iniciar',
-            style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 14),
-          ),
-        ),
-      );
-    }
-
-    final score = _currentFormScore!.score;
-    final color = Color(int.parse(_currentFormScore!.gradeColor.substring(1), radix: 16) + 0xFF000000);
-
-    return Container(
-      height: 60,
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.cardBlack,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color, width: 2),
-      ),
-      child: Row(
-        children: [
-          // Puntaje numérico
-          Container(
-            width: 50,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Center(
-              child: Text(
-                score.toStringAsFixed(1),
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-
-          SizedBox(width: 12),
-
-          // Texto de calificación
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _currentFormScore!.gradeText,
-                  style: GoogleFonts.poppins(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  'Técnica en tiempo real',
-                  style: GoogleFonts.poppins(
-                    color: AppColors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Indicador animado
-          AnimatedBuilder(
-            animation: _techniqueIndicatorAnimation,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: 1.0 + (_techniqueIndicatorAnimation.value * 0.2),
-                child: Icon(
-                  score >= 8.0 ? Icons.check_circle :
-                  score >= 6.0 ? Icons.thumb_up :
-                  Icons.warning,
-                  color: color,
-                  size: 24,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 🆕 ESTADO DE DESCANSO - MODIFICADO CON FEEDBACK
   Widget _buildRestingState() {
     return Padding(
       padding: EdgeInsets.all(20),
       child: Column(
         children: [
           _buildWorkoutHeader(),
-
           SizedBox(height: 20),
 
           // 🆕 Mostrar feedback de la serie si está disponible
@@ -697,9 +639,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
           if (_lastSetFeedback != null)
             SizedBox(height: 20),
 
-          // Timer de descanso
           _buildRestTimer(),
-
           SizedBox(height: 30),
 
           Text(
@@ -721,7 +661,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
 
           Spacer(),
 
-          // Botón para saltar descanso
           TextButton(
             onPressed: () {
               _restTimer?.cancel();
@@ -745,232 +684,303 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     );
   }
 
-  // 🆕 TARJETA DE FEEDBACK DE LA SERIE
   Widget _buildSetFeedbackCard() {
     if (_lastSetFeedback == null) return SizedBox();
 
     final feedback = _lastSetFeedback!;
-    final color = Color(int.parse(
-      feedback.averageScore >= 9.0 ? '4CAF50' :
-      feedback.averageScore >= 7.5 ? '8BC34A' :
-      feedback.averageScore >= 6.0 ? 'FFC107' :
-      feedback.averageScore >= 4.5 ? 'FF9800' : 'F44336',
-      radix: 16,
-    ) + 0xFF000000);
+    final color = feedback.averageScore >= 8.0
+        ? AppColors.pastelGreen
+        : feedback.averageScore >= 6.0
+        ? AppColors.pastelBlue
+        : AppColors.pastelOrange;
 
     return Container(
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardBlack,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color, width: 2),
       ),
       child: Column(
         children: [
-          // Header con emoji y puntaje
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                feedback.emoji,
-                style: TextStyle(fontSize: 32),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${feedback.averageScore.toStringAsFixed(1)}/10',
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                    Text(
-                      'Técnica de la serie',
-                      style: GoogleFonts.poppins(
-                        color: AppColors.grey,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
+                'Técnica del Set',
+                style: GoogleFonts.poppins(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  color: color,
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${feedback.totalReps} reps',
+                  '${feedback.averageScore.toStringAsFixed(1)}/10',
                   style: GoogleFonts.poppins(
-                    color: color,
-                    fontWeight: FontWeight.w600,
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ],
           ),
-
-          SizedBox(height: 16),
-
-          // Comentario principal
+          SizedBox(height: 12),
           Text(
             feedback.mainComment,
             style: GoogleFonts.poppins(
               color: AppColors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          SizedBox(height: 12),
-
-          // Mensaje motivacional
-          Text(
-            feedback.motivationalMessage,
-            style: GoogleFonts.poppins(
-              color: AppColors.grey,
               fontSize: 14,
             ),
-            textAlign: TextAlign.center,
           ),
-
-          // Tips si los hay
           if (feedback.tips.isNotEmpty) ...[
-            SizedBox(height: 16),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceBlack,
-                borderRadius: BorderRadius.circular(8),
+            SizedBox(height: 8),
+            ...feedback.tips.map((tip) => Text(
+              '• $tip',
+              style: GoogleFonts.poppins(
+                color: AppColors.grey,
+                fontSize: 12,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '💡 Tips para mejorar:',
-                    style: GoogleFonts.poppins(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  ...feedback.tips.map((tip) => Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      '• $tip',
-                      style: GoogleFonts.poppins(
-                        color: AppColors.grey,
-                        fontSize: 13,
-                      ),
-                    ),
-                  )).toList(),
-                ],
-              ),
-            ),
+            )),
           ],
         ],
       ),
     );
   }
 
-  // Métodos de UI existentes (mantener igual)...
-  Widget _buildWorkoutHeader() {
-    final progress = (_currentExerciseIndex + 1) / _routineExercises.length;
-    return Column(
-      children: [
-        Row(
-          children: [
-            IconButton(
-              onPressed: () => _showExitDialog(),
-              icon: Icon(Icons.close, color: AppColors.white),
+  Widget _buildWorkoutCompleted() {
+    final avgScore = _sessionFeedbacks.isNotEmpty
+        ? _sessionFeedbacks.map((f) => f.averageScore).reduce((a, b) => a + b) / _sessionFeedbacks.length
+        : 0.0;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '🎉 ¡Entrenamiento Completado!',
+            style: GoogleFonts.poppins(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: AppColors.white,
             ),
-            Expanded(
-              child: Text(
-                _selectedRoutine?.nombre ?? '',
+          ),
+          SizedBox(height: 20),
+          Text(
+            'Puntuación Técnica Promedio:',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: AppColors.grey,
+            ),
+          ),
+          Text(
+            '${avgScore.toStringAsFixed(1)}/10',
+            style: GoogleFonts.poppins(
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+              color: avgScore >= 8.0
+                  ? AppColors.pastelGreen
+                  : avgScore >= 6.0
+                  ? AppColors.pastelBlue
+                  : AppColors.pastelOrange,
+            ),
+          ),
+          SizedBox(height: 30),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.pastelBlue,
+              padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+            ),
+            child: Text(
+              'Finalizar',
+              style: GoogleFonts.poppins(
+                color: AppColors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // WIDGETS DE SOPORTE
+
+  Widget _buildWorkoutHeader() {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () => _showExitDialog(),
+          icon: Icon(Icons.arrow_back, color: AppColors.white),
+        ),
+        Expanded(
+          child: Column(
+            children: [
+              Text(
+                _selectedRoutine?.nombre ?? 'Entrenamiento',
                 style: GoogleFonts.poppins(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.white,
                 ),
-                textAlign: TextAlign.center,
               ),
-            ),
-            IconButton(
-              onPressed: () => _showWorkoutMenu(),
-              icon: Icon(Icons.more_vert, color: AppColors.white),
-            ),
-          ],
-        ),
-        SizedBox(height: 16),
-        Container(
-          height: 8,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceBlack,
-            borderRadius: BorderRadius.circular(4),
+              if (_currentExercise != null)
+                Text(
+                  '${_currentExerciseIndex + 1}/${_routineExercises.length} - Set $_currentSet/3',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppColors.grey,
+                  ),
+                ),
+            ],
           ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          'Ejercicio ${_currentExerciseIndex + 1} de ${_routineExercises.length}',
-          style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey),
         ),
       ],
     );
   }
 
+  Widget _buildExerciseCard() {
+    if (_currentExercise == null) return SizedBox();
+
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardBlack,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _getExerciseColor(_currentExercise!.grupoMuscular),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            _currentExercise!.nombre,
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.white,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            _currentExercise!.grupoMuscular,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: _getExerciseColor(_currentExercise!.grupoMuscular),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputFields() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _weightController,
+            keyboardType: TextInputType.number,
+            style: GoogleFonts.poppins(color: AppColors.white),
+            decoration: InputDecoration(
+              labelText: 'Peso (kg)',
+              labelStyle: GoogleFonts.poppins(color: AppColors.grey),
+              filled: true,
+              fillColor: AppColors.cardBlack,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        SizedBox(width: 16),
+        Expanded(
+          child: TextField(
+            controller: _repsController,
+            keyboardType: TextInputType.number,
+            style: GoogleFonts.poppins(color: AppColors.white),
+            decoration: InputDecoration(
+              labelText: 'Repeticiones',
+              labelStyle: GoogleFonts.poppins(color: AppColors.grey),
+              filled: true,
+              fillColor: AppColors.cardBlack,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReadyButton() {
+    return ElevatedButton(
+      onPressed: _startSet,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.pastelGreen,
+        padding: EdgeInsets.symmetric(horizontal: 50, vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+      ),
+      child: Text(
+        'Iniciar Serie',
+        style: GoogleFonts.poppins(
+          color: AppColors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 18,
+        ),
+      ),
+    );
+  }
+
   Widget _buildMainTimer() {
+    final minutes = _seconds ~/ 60;
+    final seconds = _seconds % 60;
+
     return AnimatedBuilder(
       animation: _pulseAnimation,
       builder: (context, child) {
         return Transform.scale(
           scale: _pulseAnimation.value,
           child: Container(
-            width: 150,
-            height: 150,
+            width: 200,
+            height: 200,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              color: AppColors.cardBlack,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.pastelPink.withOpacity(0.4),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
+              border: Border.all(color: AppColors.pastelBlue, width: 4),
             ),
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    _formatTime(_seconds),
+                    '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
                     style: GoogleFonts.poppins(
-                      fontSize: 24,
+                      fontSize: 36,
                       fontWeight: FontWeight.bold,
                       color: AppColors.white,
                     ),
                   ),
                   Text(
-                    'Set $_currentSet',
+                    'Ejercicio',
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: AppColors.white.withOpacity(0.8),
+                      fontSize: 16,
+                      color: AppColors.grey,
                     ),
                   ),
                 ],
@@ -983,8 +993,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
   }
 
   Widget _buildCurrentSetInfo() {
-    if (_currentExercise == null) return SizedBox();
-
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -994,82 +1002,40 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
       child: Column(
         children: [
           Text(
-            _currentExercise!.nombre,
+            'Set $_currentSet/3',
             style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
               color: AppColors.white,
             ),
-            textAlign: TextAlign.center,
           ),
           SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Column(
-                children: [
-                  Text(
-                    '${_weightController.text} kg',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.pastelBlue,
-                    ),
-                  ),
-                  Text(
-                    'Peso',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: AppColors.grey,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                children: [
-                  Text(
-                    _repsController.text,
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.pastelGreen,
-                    ),
-                  ),
-                  Text(
-                    'Reps',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: AppColors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          Text(
+            '${_weightController.text}kg × ${_repsController.text} reps',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: AppColors.grey,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFinishSetButton() {
-    return Container(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _finishSet,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.pastelOrange,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Text(
-          'Terminar Set',
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
+  Widget _buildFinishButton() {
+    return ElevatedButton(
+      onPressed: _finishSet,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.pastelOrange,
+        padding: EdgeInsets.symmetric(horizontal: 50, vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+      ),
+      child: Text(
+        'Finalizar Serie',
+        style: GoogleFonts.poppins(
+          color: AppColors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 18,
         ),
       ),
     );
@@ -1112,11 +1078,13 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     );
   }
 
-  // Métodos de utilidad existentes...
-  String _formatTime(int seconds) {
-    final minutes = seconds ~/ 60;
-    final remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  // GETTERS Y UTILIDADES
+
+  Exercise? get _currentExercise {
+    if (_routineExercises.isEmpty || _currentExerciseIndex >= _routineExercises.length) {
+      return null;
+    }
+    return _routineExercises[_currentExerciseIndex];
   }
 
   Color _getExerciseColor(String grupoMuscular) {
@@ -1129,6 +1097,32 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     }
   }
 
+  void _showError(String message) {
+    print('🚨 MOSTRANDO ERROR: $message');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  void _showInfo(String message) {
+    print('ℹ️ INFO: $message');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.pastelBlue,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   void _showExitDialog() {
     showDialog(
       context: context,
@@ -1136,54 +1130,24 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         backgroundColor: AppColors.cardBlack,
         title: Text('Salir del Entrenamiento', style: TextStyle(color: AppColors.white)),
         content: Text(
-          'Se perderá el progreso actual.',
-          style: GoogleFonts.poppins(color: AppColors.grey),
+          'Se perderá el progreso actual. ¿Estás seguro?',
+          style: TextStyle(color: AppColors.grey),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Continuar', style: TextStyle(color: AppColors.grey)),
+            child: Text('Cancelar', style: TextStyle(color: AppColors.grey)),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: Text('Salir', style: TextStyle(color: Colors.red)),
+            child: Text('Salir', style: TextStyle(color: AppColors.pastelOrange)),
           ),
         ],
       ),
     );
-  }
-
-  void _showWorkoutMenu() {
-    // TODO: Implementar menú
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  void _showInfo(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.pastelBlue,
-        duration: Duration(seconds: 3),
-      ),
-    );
-  }
-
-  Widget _buildExerciseReady() {
-    // Implementación existente...
-    return Container(); // Placeholder
-  }
-
-  Widget _buildWorkoutCompleted() {
-    // Implementación existente...
-    return Container(); // Placeholder
   }
 
   @override
@@ -1192,21 +1156,32 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     _restTimer?.cancel();
     _pulseController.dispose();
     _waveController.dispose();
-    _techniqueIndicatorController.dispose(); // 🆕
+    _techniqueIndicatorController.dispose();
     _weightController.dispose();
     _repsController.dispose();
 
-    // 🆕 LIMPIAR RECURSOS DE ML KIT
-    _formAnalysisCamera.dispose();
+    // 🧹 LIMPIAR RECURSOS DE CÁMARA
+    _formAnalysisCamera?.dispose();
 
     super.dispose();
   }
-}
 
-enum WorkoutPhase {
-  selectRoutine,
-  exerciseReady,
-  exerciseActive,
-  resting,
-  completed,
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.backgroundDark,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.pastelBlue),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.backgroundDark,
+      body: SafeArea(
+        child: _buildCurrentPhase(),
+      ),
+    );
+  }
 }
