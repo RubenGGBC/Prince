@@ -7,6 +7,7 @@ import 'utils/app_colors.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';  // ← NUEVO: Para Windows
 import 'dart:io';  // ← NUEVO: Para detectar plataforma
+import 'database/DatabaseHelper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,16 @@ void main() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+
+  // Para resetear la base de datos al iniciar la aplicación
+  /*try {
+    final dbHelper = DatabaseHelper();
+    await dbHelper.resetDatabase();
+    print('✅ Base de datos reseteada en main()');
+  } catch (e) {
+    print('❌ Error reseteando DB: $e');
+  }*/
+
   debugDatabasePath();
 
   await databaseFactory.setDatabasesPath(await getDatabasesPath());
@@ -37,7 +48,7 @@ class Prince extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'FitLife Pro',
+      title: 'Prince',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,

@@ -1,14 +1,26 @@
 // ✅ Sin imports circulares - User no necesita conocer DatabaseHelper
 
+import 'dart:ffi';
+
 class User {
   final String email;
   final String password;
   final DateTime createdAt;
+  final String genre;
+  final String name;
+  double weight;
+  double height;
+  int age;
 
   User({
     required this.email,
     required this.password,
     required this.createdAt,
+    required this.genre,
+    required this.name,
+    required this.weight,
+    required this.height,
+    required this.age,
   });
 
   // 📝 Método para convertir el objeto a Map (para guardar en base de datos)
@@ -17,6 +29,11 @@ class User {
       'email': email,
       'password': password,
       'created_at': createdAt.toIso8601String(),
+      'genre': genre,
+      'name': name,
+      'weight': weight,
+      'height': height,
+      'age': age,
     };
   }
 
@@ -26,6 +43,11 @@ class User {
       email: map['email'] ?? '',
       password: map['password'] ?? '',
       createdAt: DateTime.parse(map['created_at']),
+      genre: map['genre'] ?? '',
+      name: map['name'] ?? '',
+      weight: map['weight']?.toDouble() ?? 0.0,
+      height: map['height']?.toDouble() ?? 0.0,
+      age: map['age']?.toInt() ?? 0,
     );
   }
 
@@ -39,6 +61,11 @@ class User {
       email: email ?? this.email,
       password: password ?? this.password,
       createdAt: createdAt ?? this.createdAt,
+      genre: this.genre,
+      name: this.name,
+      weight: this.weight,
+      height: this.height,
+      age: this.age,
     );
   }
 

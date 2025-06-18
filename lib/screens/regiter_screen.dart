@@ -41,6 +41,11 @@ class _RegisterScreenState extends State<RegisterScreen>
           email: _emailController.text,
           password: _passwordController.text,
           createdAt: DateTime.now(),
+          genre: _selectedGender,
+          name: _nameController.text,
+          weight: double.tryParse(_weightController.text) ?? 0.0,
+          height: double.tryParse(_heightController.text) ?? 0.0,
+          age: int.tryParse(_ageController.text) ?? 0,
         );
 
         await _dbHelper.registerUser(user);
@@ -331,7 +336,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                           return 'Ingresa tu peso';
                                         }
                                         double? weight = double.tryParse(value);
-                                        if (weight == null || weight < 30 || weight > 300) {
+                                        if (weight == null || weight < 30.0 || weight > 300.0) {
                                           return 'Peso inválido';
                                         }
                                         return null;

@@ -28,7 +28,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3, // 📝 Incrementé la versión para forzar recreación
+      version: 5, // 📝 Incrementé la versión para forzar recreación
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -43,7 +43,12 @@ class DatabaseHelper {
        id INTEGER PRIMARY KEY AUTOINCREMENT,
        email TEXT UNIQUE NOT NULL,
        password TEXT NOT NULL,
-       created_at TEXT NOT NULL
+       created_at TEXT NOT NULL,
+       genre TEXT NOT NULL,
+       name TEXT NOT NULL,
+       weight REAL NOT NULL,
+       height REAL NOT NULL,
+       age INTEGER NOT NULL  
      )
    ''');
     print('✅ Tabla users creada'); // 🔍 Debug
@@ -89,12 +94,28 @@ class DatabaseHelper {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print('🔄 Actualizando base de datos de versión $oldVersion a $newVersion'); // 🔍 Debug
 
-    if (oldVersion < 3) {
+    if (oldVersion <5) {
       // Eliminar tablas existentes y recrear
+      await db.execute('DROP TABLE IF EXISTS users');
       await db.execute('DROP TABLE IF EXISTS exercises');
       await db.execute('DROP TABLE IF EXISTS rutinas');
 
       // Recrear tablas
+
+      await db.execute('''
+       CREATE TABLE users(
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         email TEXT UNIQUE NOT NULL,
+         password TEXT NOT NULL,
+         created_at TEXT NOT NULL,
+         genre TEXT NOT NULL,
+         name TEXT NOT NULL,
+         weight REAL NOT NULL,
+         height REAL NOT NULL,
+         age INTEGER NOT NULL  
+       )
+      ''');
+
       await db.execute('''
        CREATE TABLE exercises(
          id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,13 +166,18 @@ class DatabaseHelper {
     );
 
     if (existingUser.isNotEmpty) {
-      throw Exception('Usuario ya existe con este email');
+      throw Exception('Ya existe un usuario con este email');
     }
 
     final userWithHashedPassword = User(
       email: user.email,
       password: _hashPassword(user.password),
       createdAt: user.createdAt,
+      genre: user.genre,
+      name: user.name,
+      weight: user.weight,
+      height: user.height,
+      age: user.age,
     );
 
     return await db.insert('users', userWithHashedPassword.toMap());

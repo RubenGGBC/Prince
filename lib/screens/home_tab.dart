@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:untitled2/screens/progress_tab.dart';
 import '../utils/app_colors.dart';
 import '../domain/exercise.dart';
 import '../domain/user.dart'; // ✅ IMPORTAR User
@@ -88,6 +89,9 @@ class _HomeTabState extends State<HomeTab> {
 
                 // 🤖 PÁGINA 1: CHAT CON PRINCE IA
                 PrinceAIChatScreen(),
+
+                // PÁGINA 2: PROGRESO
+                ProgressTab(user: widget.user),
               ],
             ),
 
@@ -259,7 +263,8 @@ class _HomeTabState extends State<HomeTab> {
 
   // 📱 HEADER - MOSTRAR NOMBRE DEL USUARIO + CORONA
   Widget _buildHeader(bool isTablet, bool isDesktop) {
-    final userName = _capitalizeFirst(_getUserDisplayName());
+    //final userName = _capitalizeFirst(_getUserDisplayName());
+    final userName = _capitalizeFirst(widget.user.name);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
