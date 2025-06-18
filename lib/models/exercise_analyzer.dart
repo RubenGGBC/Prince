@@ -1,29 +1,32 @@
-// lib/services/exercise_analyzer.dart
+// lib/models/exercise_analyzer.dart
 import 'dart:math' as math;
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
-import '../models/form_feedback.dart';
+import '../models/form_feedback.dart' hide FormScore;
+import '../models/form_score.dart';
 
-// 🧠 CLASE PRINCIPAL PARA ANALIZAR LA TÉCNICA DE EJERCICIOS
 class ExerciseAnalyzer {
-  // 📊 Contadores para detectar repeticiones
   int _repCount = 0;
   bool _isInDownPosition = false;
   double _lastAngle = 0.0;
 
-  // 🎯 MÉTODO PRINCIPAL - Analizar cualquier ejercicio
+  int get currentRepCount => _repCount;
+
+  void resetForNewSet() {
+    _repCount = 0;
+    _isInDownPosition = false;
+    _lastAngle = 0.0;
+  }
+
   FormScore analyzeExerciseFrame(ExerciseType exerciseType, Pose pose) {
     try {
-      // Convertir pose de ML Kit a nuestro formato
       final keypoints = _convertPoseToKeypoints(pose);
 
-      // Verificar que tenemos suficientes puntos confiables
       final requiredPoints = exerciseType.keypoints;
       final visiblePoints = keypoints.where((kp) =>
       requiredPoints.contains(kp.name) && kp.isVisible
       ).length;
 
       if (visiblePoints < requiredPoints.length * 0.6) {
-        // No hay suficientes puntos visibles
         return FormScore(
           score: 0.0,
           timestamp: DateTime.now(),
@@ -31,7 +34,6 @@ class ExerciseAnalyzer {
         );
       }
 
-      // Analizar según el tipo de ejercicio
       switch (exerciseType) {
         case ExerciseType.pressPlano:
           return _analyzePressPlano(keypoints);
@@ -62,7 +64,8 @@ class ExerciseAnalyzer {
     }
   }
 
-  // 🏋️ ANÁLISIS ESPECÍFICO - PRESS DE PECHO PLANO
+  // 🏋️ ANÁLISIS ESPECÍFICOS POR EJERCICIO
+
   FormScore _analyzePressPlano(List<BodyKeypoint> keypoints) {
     final leftShoulder = _getKeypoint(keypoints, 'leftShoulder');
     final rightShoulder = _getKeypoint(keypoints, 'rightShoulder');
@@ -78,28 +81,24 @@ class ExerciseAnalyzer {
     double score = 10.0;
     final confidence = _calculateAverageConfidence([leftShoulder, rightShoulder, leftElbow, rightElbow, leftWrist, rightWrist]);
 
-    // 1. Verificar simetría de hombros (deben estar alineados)
-    final shoulderSymmetry = _calculateSymmetry(leftShoulder!.y, rightShoulder!.y);
-    if (shoulderSymmetry < 0.85) {
-      score -= 2.0; // Penalizar por hombros desalineados
+    // 1. Verificar simetría de los brazos
+    final leftElbowAngle = _calculateAngle(leftShoulder!, leftElbow!, leftWrist!);
+    final rightElbowAngle = _calculateAngle(rightShoulder!, rightElbow!, rightWrist!);
+    final symmetry = _calculateSymmetry(leftElbowAngle, rightElbowAngle);
+
+    if (symmetry < 0.8) {
+      score -= 2.0; // Penalizar por asimetría
     }
 
-    // 2. Verificar ángulo del codo (debe estar entre 45-90 grados)
-    final leftElbowAngle = _calculateAngle(leftShoulder, leftElbow!, leftWrist!);
-    final rightElbowAngle = _calculateAngle(rightShoulder, rightElbow!, rightWrist!);
+    // 2. Verificar rango de movimiento
     final avgElbowAngle = (leftElbowAngle + rightElbowAngle) / 2;
 
-    if (avgElbowAngle < 45 || avgElbowAngle > 90) {
-      score -= 1.5; // Penalizar por rango de movimiento incorrecto
+    if (avgElbowAngle < 60 || avgElbowAngle > 120) {
+      score -= 1.5; // Rango óptimo
     }
 
-    // 3. Verificar que las muñecas estén por encima de los codos
-    if (leftWrist.y > leftElbow.y || rightWrist.y > rightElbow.y) {
-      score -= 2.0; // Penalizar por muñecas caídas
-    }
-
-    // 4. Detectar repeticiones
-    _detectRepetition(avgElbowAngle, 70.0); // Umbral para press de pecho
+    // 3. Detectar repeticiones
+    _detectRepetition(avgElbowAngle, 90.0);
 
     return FormScore(
       score: math.max(0.0, score),
@@ -108,7 +107,6 @@ class ExerciseAnalyzer {
     );
   }
 
-  // 🦅 ANÁLISIS ESPECÍFICO - PECK DECK
   FormScore _analyzePeckDeck(List<BodyKeypoint> keypoints) {
     final leftShoulder = _getKeypoint(keypoints, 'leftShoulder');
     final rightShoulder = _getKeypoint(keypoints, 'rightShoulder');
@@ -122,23 +120,17 @@ class ExerciseAnalyzer {
     double score = 10.0;
     final confidence = _calculateAverageConfidence([leftShoulder, rightShoulder, leftElbow, rightElbow]);
 
-    // 1. Verificar que los codos estén a la altura de los hombros
-    final leftElbowHeight = (leftElbow!.y - leftShoulder!.y).abs();
-    final rightElbowHeight = (rightElbow!.y - rightShoulder!.y).abs();
+    // 1. Verificar que los codos estén a nivel de los hombros
+    final leftElbowHeight = leftElbow!.y - leftShoulder!.y;
+    final rightElbowHeight = rightElbow!.y - rightShoulder!.y;
 
-    if (leftElbowHeight > 50 || rightElbowHeight > 50) { // 50 píxeles de tolerancia
-      score -= 2.5; // Penalizar por codos mal posicionados
+    if (leftElbowHeight.abs() > 50 || rightElbowHeight.abs() > 50) {
+      score -= 2.0; // Los codos deben estar cerca del nivel de los hombros
     }
 
-    // 2. Verificar simetría en el movimiento
-    final symmetry = _calculateSymmetry(leftElbow.x, rightElbow.x);
-    if (symmetry < 0.8) {
-      score -= 2.0; // Penalizar por asimetría
-    }
-
-    // 3. Verificar rango de movimiento (los codos deben juntarse al frente)
-    final elbowDistance = _calculateDistance(leftElbow, rightElbow);
-    _detectRepetition(elbowDistance, 100.0); // Umbral para peck deck
+    // 2. Verificar apertura de brazos
+    final armDistance = _calculateDistance(leftElbow, rightElbow);
+    _detectRepetition(armDistance, 200.0); // Distancia promedio
 
     return FormScore(
       score: math.max(0.0, score),
@@ -147,7 +139,6 @@ class ExerciseAnalyzer {
     );
   }
 
-  // ⬆️ ANÁLISIS ESPECÍFICO - PRESS INCLINADO
   FormScore _analyzePressInclinado(List<BodyKeypoint> keypoints) {
     final leftShoulder = _getKeypoint(keypoints, 'leftShoulder');
     final rightShoulder = _getKeypoint(keypoints, 'rightShoulder');
@@ -163,13 +154,15 @@ class ExerciseAnalyzer {
     double score = 10.0;
     final confidence = _calculateAverageConfidence([leftShoulder, rightShoulder, leftElbow, rightElbow, leftWrist, rightWrist]);
 
-    // 1. Verificar inclinación (las muñecas deben estar más altas que los hombros)
-    if (leftWrist!.y >= leftShoulder!.y || rightWrist!.y >= rightShoulder!.y) {
-      score -= 3.0; // Penalizar por falta de inclinación
+    // 1. Verificar ángulo inclinado (30-45 grados)
+    final bodyAngle = _calculateAngle(leftShoulder!, BodyKeypoint(name: 'temp', x: leftShoulder.x, y: leftShoulder.y + 100, confidence: 1.0), rightShoulder!);
+
+    if (bodyAngle < 30 || bodyAngle > 60) {
+      score -= 1.5; // Inclinación incorrecta
     }
 
     // 2. Verificar ángulo del codo (similar al press plano pero más cerrado)
-    final leftElbowAngle = _calculateAngle(leftShoulder, leftElbow!, leftWrist);
+    final leftElbowAngle = _calculateAngle(leftShoulder, leftElbow!, leftWrist!);
     final rightElbowAngle = _calculateAngle(rightShoulder!, rightElbow!, rightWrist!);
     final avgElbowAngle = (leftElbowAngle + rightElbowAngle) / 2;
 
@@ -187,7 +180,6 @@ class ExerciseAnalyzer {
     );
   }
 
-  // 💺 ANÁLISIS ESPECÍFICO - FONDOS (Vista desde atrás)
   FormScore _analyzeFondos(List<BodyKeypoint> keypoints) {
     final leftShoulder = _getKeypoint(keypoints, 'leftShoulder');
     final rightShoulder = _getKeypoint(keypoints, 'rightShoulder');
@@ -203,7 +195,7 @@ class ExerciseAnalyzer {
     double score = 10.0;
     final confidence = _calculateAverageConfidence([leftShoulder, rightShoulder, leftElbow, rightElbow, leftHip, rightHip]);
 
-    // 1. Verificar que el torso esté vertical (hombros alineados con caderas)
+    // 1. Verificar que el torso esté vertical
     final leftTorsoAngle = _calculateAngle(leftShoulder!, leftHip!, BodyKeypoint(name: 'reference', x: leftHip.x, y: leftHip.y + 100, confidence: 1.0));
     final rightTorsoAngle = _calculateAngle(rightShoulder!, rightHip!, BodyKeypoint(name: 'reference', x: rightHip.x, y: rightHip.y + 100, confidence: 1.0));
 
@@ -211,7 +203,7 @@ class ExerciseAnalyzer {
       score -= 2.5; // Penalizar por inclinación del torso
     }
 
-    // 2. Verificar profundidad del movimiento (codos deben flexionarse)
+    // 2. Verificar profundidad del movimiento
     final avgElbowHeight = (leftElbow!.y + rightElbow!.y) / 2;
     final avgShoulderHeight = (leftShoulder.y + rightShoulder.y) / 2;
 
@@ -224,13 +216,11 @@ class ExerciseAnalyzer {
     );
   }
 
-  // 💪 ANÁLISIS ESPECÍFICO - EXTENSIÓN DE TRÍCEPS (Vista lateral)
   FormScore _analyzeExtensionTriceps(List<BodyKeypoint> keypoints) {
     final leftShoulder = _getKeypoint(keypoints, 'leftShoulder');
     final leftElbow = _getKeypoint(keypoints, 'leftElbow');
     final leftWrist = _getKeypoint(keypoints, 'leftWrist');
 
-    // Para vista lateral, usamos principalmente un lado
     if (!_allPointsVisible([leftShoulder, leftElbow, leftWrist])) {
       return FormScore(score: 0.0, timestamp: DateTime.now(), confidence: 0.0);
     }
@@ -238,17 +228,14 @@ class ExerciseAnalyzer {
     double score = 10.0;
     final confidence = _calculateAverageConfidence([leftShoulder, leftElbow, leftWrist]);
 
-    // 1. Verificar que el codo esté estático (no debe moverse mucho)
-    final elbowStability = _calculateDistance(leftShoulder!, leftElbow!);
+    // 1. Verificar extensión completa del brazo
+    final armAngle = _calculateAngle(leftShoulder!, leftElbow!, leftWrist!);
 
-    // 2. Verificar extensión completa del brazo
-    final armAngle = _calculateAngle(leftShoulder, leftElbow, leftWrist!);
-
-    if (armAngle < 160) { // El brazo debe estar casi completamente extendido
+    if (armAngle < 160) {
       score -= (160 - armAngle) * 0.05; // Penalizar por extensión incompleta
     }
 
-    // 3. Detectar repeticiones basadas en el ángulo del brazo
+    // 2. Detectar repeticiones
     _detectRepetition(armAngle, 140.0);
 
     return FormScore(
@@ -258,7 +245,6 @@ class ExerciseAnalyzer {
     );
   }
 
-  // 💪 ANÁLISIS ESPECÍFICO - EXTENSIÓN TRÍCEPS TRAS NUCA (Vista lateral)
   FormScore _analyzeExtensionTricepsTrasNuca(List<BodyKeypoint> keypoints) {
     final leftShoulder = _getKeypoint(keypoints, 'leftShoulder');
     final leftElbow = _getKeypoint(keypoints, 'leftElbow');
@@ -271,20 +257,19 @@ class ExerciseAnalyzer {
     double score = 10.0;
     final confidence = _calculateAverageConfidence([leftShoulder, leftElbow, leftWrist]);
 
-    // 1. Verificar que el codo esté alto (por encima del hombro)
+    // 1. Verificar que el codo esté por encima de la cabeza
     if (leftElbow!.y > leftShoulder!.y) {
-      score -= 3.0; // Penalizar por codo bajo
+      score -= 3.0; // El codo debe estar elevado
     }
 
-    // 2. Verificar que la muñeca vaya detrás de la cabeza
+    // 2. Verificar rango de movimiento tras la nuca
     final armAngle = _calculateAngle(leftShoulder, leftElbow, leftWrist!);
 
-    if (armAngle > 90) { // En la posición inferior, el ángulo debe ser agudo
-      score -= 2.0;
+    if (armAngle < 60 || armAngle > 150) {
+      score -= 2.0; // Rango específico para tras nuca
     }
 
-    // 3. Detectar repeticiones
-    _detectRepetition(armAngle, 60.0);
+    _detectRepetition(armAngle, 90.0);
 
     return FormScore(
       score: math.max(0.0, score),
@@ -293,32 +278,36 @@ class ExerciseAnalyzer {
     );
   }
 
-  // 🦵 ANÁLISIS ESPECÍFICO - SENTADILLAS (ya implementado, mejorado)
   FormScore _analyzeSentadillas(List<BodyKeypoint> keypoints) {
     final leftHip = _getKeypoint(keypoints, 'leftHip');
-    final leftKnee = _getKeypoint(keypoints, 'leftKnee');
-    final leftAnkle = _getKeypoint(keypoints, 'leftAnkle');
     final rightHip = _getKeypoint(keypoints, 'rightHip');
+    final leftKnee = _getKeypoint(keypoints, 'leftKnee');
     final rightKnee = _getKeypoint(keypoints, 'rightKnee');
+    final leftAnkle = _getKeypoint(keypoints, 'leftAnkle');
     final rightAnkle = _getKeypoint(keypoints, 'rightAnkle');
 
-    if (!_allPointsVisible([leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle])) {
+    if (!_allPointsVisible([leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle])) {
       return FormScore(score: 0.0, timestamp: DateTime.now(), confidence: 0.0);
     }
 
     double score = 10.0;
-    final confidence = _calculateAverageConfidence([leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle]);
+    final confidence = _calculateAverageConfidence([leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle]);
 
-    // 1. Calcular ángulo de la rodilla
+    // 1. Verificar profundidad de la sentadilla
     final leftKneeAngle = _calculateAngle(leftHip!, leftKnee!, leftAnkle!);
     final rightKneeAngle = _calculateAngle(rightHip!, rightKnee!, rightAnkle!);
     final avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
 
-    // 2. Evaluar profundidad
     if (avgKneeAngle > 120) {
-      score -= 3.0; // Muy poco profundo
-    } else if (avgKneeAngle > 90) {
-      score -= 1.0; // Podría bajar más
+      score -= 3.0; // Debe bajar más
+    } else if (avgKneeAngle < 70) {
+      score -= 1.0; // Muy profunda
+    }
+
+    // 2. Verificar simetría de las piernas
+    final symmetry = _calculateSymmetry(leftKneeAngle, rightKneeAngle);
+    if (symmetry < 0.85) {
+      score -= 2.0;
     }
 
     // 3. Detectar repeticiones
@@ -331,21 +320,24 @@ class ExerciseAnalyzer {
     );
   }
 
-  // 🤲 ANÁLISIS ESPECÍFICO - FLEXIONES
   FormScore _analyzeFlexiones(List<BodyKeypoint> keypoints) {
     final leftShoulder = _getKeypoint(keypoints, 'leftShoulder');
+    final rightShoulder = _getKeypoint(keypoints, 'rightShoulder');
     final leftElbow = _getKeypoint(keypoints, 'leftElbow');
+    final rightElbow = _getKeypoint(keypoints, 'rightElbow');
     final leftWrist = _getKeypoint(keypoints, 'leftWrist');
+    final rightWrist = _getKeypoint(keypoints, 'rightWrist');
     final leftHip = _getKeypoint(keypoints, 'leftHip');
+    final rightHip = _getKeypoint(keypoints, 'rightHip');
 
-    if (!_allPointsVisible([leftShoulder, leftElbow, leftWrist, leftHip])) {
+    if (!_allPointsVisible([leftShoulder, rightShoulder, leftElbow, rightElbow, leftWrist, rightWrist, leftHip, rightHip])) {
       return FormScore(score: 0.0, timestamp: DateTime.now(), confidence: 0.0);
     }
 
     double score = 10.0;
-    final confidence = _calculateAverageConfidence([leftShoulder, leftElbow, leftWrist, leftHip]);
+    final confidence = _calculateAverageConfidence([leftShoulder, rightShoulder, leftElbow, rightElbow, leftWrist, rightWrist, leftHip, rightHip]);
 
-    // 1. Verificar alineación del cuerpo (hombro-cadera en línea recta)
+    // 1. Verificar alineación del cuerpo
     final bodyAngle = _calculateAngle(leftShoulder!, leftHip!, BodyKeypoint(name: 'reference', x: leftHip.x, y: leftHip.y + 100, confidence: 1.0));
 
     if (bodyAngle < 170) {
@@ -363,7 +355,6 @@ class ExerciseAnalyzer {
     );
   }
 
-  // 🌟 ANÁLISIS GENÉRICO - Para ejercicios no específicos
   FormScore _analyzeGenerico(List<BodyKeypoint> keypoints) {
     final visiblePoints = keypoints.where((kp) => kp.isVisible).length;
     final confidence = keypoints.isNotEmpty ? _calculateAverageConfidence(keypoints.map((kp) => kp as BodyKeypoint?).toList()) : 0.0;
@@ -378,14 +369,13 @@ class ExerciseAnalyzer {
     );
   }
 
-  // 🔧 MÉTODOS DE UTILIDAD
 
   List<BodyKeypoint> _convertPoseToKeypoints(Pose pose) {
     final keypoints = <BodyKeypoint>[];
 
     for (final landmark in pose.landmarks.entries) {
       keypoints.add(BodyKeypoint(
-        name: landmark.key.name, // Los enums ya tienen .name en esta versión
+        name: landmark.key.name,
         x: landmark.value.x,
         y: landmark.value.y,
         confidence: landmark.value.likelihood,
@@ -397,7 +387,6 @@ class ExerciseAnalyzer {
 
   BodyKeypoint? _getKeypoint(List<BodyKeypoint> keypoints, String name) {
     try {
-      // Mapear nombres a los nombres correctos de la API
       final nameMapping = {
         'leftShoulder': 'leftShoulder',
         'rightShoulder': 'rightShoulder',
@@ -459,16 +448,15 @@ class ExerciseAnalyzer {
   }
 
   void _detectRepetition(double currentValue, double threshold) {
-    // Lógica simple para detectar cuando se cruza un umbral
     if (!_isInDownPosition && currentValue < threshold) {
       _isInDownPosition = true;
     } else if (_isInDownPosition && currentValue > threshold) {
       _isInDownPosition = false;
       _repCount++;
+      print('🔄 Repetición detectada: $_repCount');
     }
   }
 
-  // 📊 GENERAR FEEDBACK FINAL DE LA SERIE
   FormFeedback generateSeriesFeedback(List<FormScore> scores, ExerciseType exerciseType) {
     if (scores.isEmpty) {
       return FormFeedback(
@@ -480,112 +468,59 @@ class ExerciseAnalyzer {
       );
     }
 
-    // Filtrar solo scores confiables
     final reliableScores = scores.where((s) => s.isReliable).toList();
 
     if (reliableScores.isEmpty) {
       return FormFeedback(
         averageScore: 0.0,
         mainComment: 'La calidad de detección fue muy baja.',
-        tips: ['Mejora la iluminación', 'Ponte más cerca de la cámara'],
+        tips: ['Mejora la iluminación', 'Asegúrate de estar completamente visible'],
         detailedScores: {},
         totalReps: 0,
       );
     }
 
-    // Calcular puntaje promedio
-    final avgScore = reliableScores
-        .map((s) => s.score)
-        .reduce((a, b) => a + b) / reliableScores.length;
+    final averageScore = reliableScores.map((s) => s.score).reduce((a, b) => a + b) / reliableScores.length;
+    final maxScore = reliableScores.map((s) => s.score).reduce(math.max);
+    final minScore = reliableScores.map((s) => s.score).reduce(math.min);
 
     // Generar comentario principal
-    String mainComment = _generateMainComment(avgScore, exerciseType);
+    String mainComment;
+    if (averageScore >= 8.5) {
+      mainComment = '¡Técnica excelente! Sigue así. 🔥';
+    } else if (averageScore >= 7.0) {
+      mainComment = '¡Muy bien! Solo pequeños ajustes. 💪';
+    } else if (averageScore >= 5.5) {
+      mainComment = 'Buen trabajo, puedes mejorar más. 👍';
+    } else if (averageScore >= 4.0) {
+      mainComment = 'Vas por buen camino, sigue practicando. 🎯';
+    } else {
+      mainComment = 'Enfócate en la técnica más que en el peso. 📚';
+    }
 
     // Generar tips específicos
-    List<String> tips = _generateTips(avgScore, exerciseType);
+    final tips = <String>[];
+    if (averageScore < 6.0) {
+      tips.add('Concéntrate en el control del movimiento');
+    }
+    if (maxScore - minScore > 3.0) {
+      tips.add('Trata de mantener consistencia en toda la serie');
+    }
+    if (averageScore >= 8.0) {
+      tips.add('¡Excelente forma! Considera aumentar el peso gradualmente');
+    }
 
     return FormFeedback(
-      averageScore: avgScore,
+      averageScore: averageScore,
       mainComment: mainComment,
       tips: tips,
       detailedScores: {
-        'Técnica General': avgScore,
-        'Consistencia': _calculateConsistency(reliableScores),
+        'promedio': averageScore,
+        'máximo': maxScore,
+        'mínimo': minScore,
+        'consistencia': maxScore - minScore,
       },
       totalReps: _repCount,
     );
   }
-
-  String _generateMainComment(double score, ExerciseType exerciseType) {
-    if (score >= 9.0) return '¡Técnica excelente! Mantén esa forma perfecta.';
-    if (score >= 7.5) return 'Muy buena técnica, solo pequeños ajustes.';
-    if (score >= 6.0) return 'Técnica sólida, hay espacio para mejorar.';
-    if (score >= 4.5) return 'Técnica decente, enfócate en los fundamentos.';
-    return 'Necesitas trabajar en la técnica básica.';
-  }
-
-  List<String> _generateTips(double score, ExerciseType exerciseType) {
-    List<String> tips = [];
-
-    if (score < 7.0) {
-      switch (exerciseType) {
-        case ExerciseType.pressPlano:
-        case ExerciseType.pressInclinado:
-          tips.addAll([
-            'Mantén los hombros hacia atrás y abajo',
-            'Controla la bajada de la barra',
-            'Mantén las muñecas firmes y rectas'
-          ]);
-          break;
-        case ExerciseType.fondos:
-          tips.addAll([
-            'Mantén el torso vertical',
-            'Baja hasta que los codos estén a 90°',
-            'Sube de forma controlada'
-          ]);
-          break;
-        case ExerciseType.extensionTriceps:
-        case ExerciseType.extensionTricepsTrasNuca:
-          tips.addAll([
-            'Mantén los codos quietos',
-            'Extiende completamente el brazo',
-            'Controla el peso en la bajada'
-          ]);
-          break;
-        default:
-          tips.add('Enfócate en el control y la forma');
-      }
-    }
-
-    if (tips.isEmpty) {
-      tips.add('¡Sigue así! Tu técnica está mejorando.');
-    }
-
-    return tips;
-  }
-
-  double _calculateConsistency(List<FormScore> scores) {
-    if (scores.length < 2) return 10.0;
-
-    final variance = _calculateVariance(scores.map((s) => s.score).toList());
-    return math.max(0.0, 10.0 - variance);
-  }
-
-  double _calculateVariance(List<double> values) {
-    final mean = values.reduce((a, b) => a + b) / values.length;
-    final variance = values
-        .map((x) => math.pow(x - mean, 2))
-        .reduce((a, b) => a + b) / values.length;
-    return variance;
-  }
-
-  // 🔄 Resetear contadores para nueva serie
-  void resetForNewSet() {
-    _repCount = 0;
-    _isInDownPosition = false;
-    _lastAngle = 0.0;
-  }
-
-  // 📊 Obtener estadísticas actuales
-  int get currentRepCount => _repCount;
 }
