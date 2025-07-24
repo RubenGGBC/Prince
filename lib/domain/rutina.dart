@@ -1,5 +1,4 @@
-import '../database/DatabaseHelper.dart';
-import 'Exercise.dart';
+import 'exercise.dart';
 
 class Rutina {
   final int? id;

@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
+import '../domain/user.dart';
+import '../domain/nutricion.dart';
+import '../database/database_helper.dart';
 
 class NutritionTab extends StatefulWidget {
+  final User? user;
+
+  const NutritionTab({
+    Key? key,
+    this.user,
+  }) : super(key: key);
+
   @override
   _NutritionTabState createState() => _NutritionTabState();
 }
@@ -11,6 +21,11 @@ class _NutritionTabState extends State<NutritionTab> {
   // 📝 VARIABLES - Aquí puedes agregar tus datos
   int _selectedTabIndex = 0; // 0: Hoy, 1: Historial, 2: Alimentos
   final List<String> _tabs = ['Hoy', 'Historial', 'Alimentos'];
+  
+  // Database and nutrition data
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  List<Nutricion> _nutritionItems = [];
+  bool _isLoading = true;
 
   // 📝 DATOS DE NUTRICIÓN - Reemplaza con tu base de datos
   final Map<String, dynamic> _todayNutrition = {
@@ -81,6 +96,30 @@ class _NutritionTabState extends State<NutritionTab> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadNutritionData();
+  }
+
+  Future<void> _loadNutritionData() async {
+    setState(() => _isLoading = true);
+    try {
+      final nutritionData = await _dbHelper.getAllNutrition();
+      if (mounted) {
+        setState(() {
+          _nutritionItems = nutritionData;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      print('Error cargando datos de nutrición: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primaryBlack,
@@ -103,7 +142,7 @@ class _NutritionTabState extends State<NutritionTab> {
           // 🔧 TU LÓGICA: Agregar nueva comida
           _showAddFoodDialog();
         },
-        backgroundColor: AppColors.pastelOrange,
+        backgroundColor: AppColors.nutritionOrange,
         child: Icon(Icons.add, color: AppColors.white),
       ),
     );
@@ -176,7 +215,7 @@ class _NutritionTabState extends State<NutritionTab> {
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.pastelOrange : Colors.transparent,
+                  color: isSelected ? AppColors.nutritionOrange : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -243,11 +282,11 @@ class _NutritionTabState extends State<NutritionTab> {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
+        gradient: AppColors.nutritionGradient,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.pastelPink.withOpacity(0.3),
+            color: AppColors.nutritionGreen.withOpacity(0.3),
             blurRadius: 15,
             spreadRadius: 2,
           ),
@@ -621,35 +660,439 @@ class _NutritionTabState extends State<NutritionTab> {
   // 🔧 MÉTODOS PARA TU LÓGICA - Implementa estos métodos con tu lógica de negocio
 
   void _showAddFoodDialog() {
-    // 🔧 TU LÓGICA: Mostrar diálogo para agregar comida
+    _showAddRecipeDialog();
+  }
+
+  void _showAddRecipeDialog() {
+    final _formKey = GlobalKey<FormState>();
+    final _nameController = TextEditingController();
+    final _caloriasController = TextEditingController();
+    final _proteinasController = TextEditingController();
+    final _grasasController = TextEditingController();
+    final _carbohidratosController = TextEditingController();
+    final _descripcionController = TextEditingController();
+    String _selectedCategory = 'Desayuno';
+    
+    final categories = ['Desayuno', 'Almuerzo', 'Cena', 'Snack'];
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBlack,
-        title: Text(
-          'Agregar Alimento',
-          style: GoogleFonts.poppins(color: AppColors.white),
-        ),
-        content: Text(
-          'Aquí implementarías tu formulario para agregar alimentos',
-          style: GoogleFonts.poppins(color: AppColors.grey),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar', style: TextStyle(color: AppColors.grey)),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.8,
+            decoration: BoxDecoration(
+              gradient: AppColors.nutritionGradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppColors.createBlueShadow(AppColors.nutritionGreen),
+            ),
+            child: Container(
+              decoration: AppColors.createGlassmorphism(
+                opacity: 0.1,
+                borderRadius: 20,
+                borderColor: AppColors.nutritionGreen.withOpacity(0.3),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: AppColors.auroraGradient,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.nutritionGreen.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.restaurant_menu,
+                              color: AppColors.white,
+                              size: 24,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Agregar Nueva Receta',
+                              style: GoogleFonts.poppins(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: Icon(Icons.close, color: AppColors.white),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 20),
+                      
+                      // Form Content
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              // Photo Upload Section
+                              Container(
+                                height: 120,
+                                decoration: AppColors.createGlassmorphism(
+                                  opacity: 0.15,
+                                  borderRadius: 16,
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          gradient: AppColors.orangeGradient,
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Icon(
+                                          Icons.add_a_photo,
+                                          color: AppColors.white,
+                                          size: 28,
+                                        ),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Agregar Foto (Opcional)',
+                                        style: GoogleFonts.poppins(
+                                          color: AppColors.white.withOpacity(0.8),
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: 20),
+                              
+                              // Recipe Name
+                              _buildGlassFormField(
+                                controller: _nameController,
+                                label: 'Nombre de la Receta',
+                                icon: Icons.restaurant,
+                                gradient: AppColors.nutritionGradient,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Por favor ingresa el nombre de la receta';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              SizedBox(height: 16),
+                              
+                              // Category Selector
+                              Container(
+                                decoration: AppColors.createGlassmorphism(opacity: 0.15),
+                                child: DropdownButtonFormField<String>(
+                                  value: _selectedCategory,
+                                  decoration: InputDecoration(
+                                    labelText: 'Categoría',
+                                    labelStyle: GoogleFonts.poppins(color: AppColors.white.withOpacity(0.8)),
+                                    prefixIcon: Container(
+                                      margin: EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        gradient: AppColors.purpleGradient,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(Icons.category, color: AppColors.white, size: 20),
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.transparent,
+                                  ),
+                                  dropdownColor: AppColors.surfaceBlack,
+                                  style: GoogleFonts.poppins(color: AppColors.white),
+                                  items: categories.map((category) {
+                                    return DropdownMenuItem<String>(
+                                      value: category,
+                                      child: Text(category, style: GoogleFonts.poppins(color: AppColors.white)),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedCategory = value!;
+                                    });
+                                  },
+                                ),
+                              ),
+                              SizedBox(height: 16),
+                              
+                              // Macronutrients Row
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildGlassFormField(
+                                      controller: _caloriasController,
+                                      label: 'Calorías',
+                                      icon: Icons.local_fire_department,
+                                      gradient: AppColors.fitnessGradient,
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Requerido';
+                                        }
+                                        if (double.tryParse(value) == null) {
+                                          return 'Número inválido';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildGlassFormField(
+                                      controller: _proteinasController,
+                                      label: 'Proteínas (g)',
+                                      icon: Icons.fitness_center,
+                                      gradient: AppColors.purpleGradient,
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Requerido';
+                                        }
+                                        if (double.tryParse(value) == null) {
+                                          return 'Número inválido';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 16),
+                              
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildGlassFormField(
+                                      controller: _carbohidratosController,
+                                      label: 'Carbohidratos (g)',
+                                      icon: Icons.grain,
+                                      gradient: AppColors.orangeGradient,
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Requerido';
+                                        }
+                                        if (double.tryParse(value) == null) {
+                                          return 'Número inválido';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildGlassFormField(
+                                      controller: _grasasController,
+                                      label: 'Grasas (g)',
+                                      icon: Icons.opacity,
+                                      gradient: AppColors.mintGradient,
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Requerido';
+                                        }
+                                        if (double.tryParse(value) == null) {
+                                          return 'Número inválido';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 16),
+                              
+                              // Description
+                              _buildGlassFormField(
+                                controller: _descripcionController,
+                                label: 'Descripción (Opcional)',
+                                icon: Icons.description,
+                                gradient: AppColors.auroraGradient,
+                                maxLines: 3,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      // Action Buttons
+                      SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                backgroundColor: AppColors.white.withOpacity(0.1),
+                              ),
+                              child: Text(
+                                'Cancelar',
+                                style: GoogleFonts.poppins(
+                                  color: AppColors.white.withOpacity(0.8),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => _saveRecipe(
+                                _formKey,
+                                _nameController,
+                                _caloriasController,
+                                _proteinasController,
+                                _grasasController,
+                                _carbohidratosController,
+                                _descripcionController,
+                                _selectedCategory,
+                                context,
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                backgroundColor: AppColors.nutritionOrange,
+                                elevation: 8,
+                                shadowColor: AppColors.nutritionOrange.withOpacity(0.4),
+                              ),
+                              child: Text(
+                                'Guardar Receta',
+                                style: GoogleFonts.poppins(
+                                  color: AppColors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-          TextButton(
-            onPressed: () {
-              // 🔧 TU LÓGICA: Guardar alimento en BD
-              Navigator.pop(context);
-              print("Guardar alimento en BD");
-            },
-            child: Text('Guardar', style: TextStyle(color: AppColors.pastelOrange)),
-          ),
-        ],
+        ),
       ),
     );
+  }
+
+  Widget _buildGlassFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required LinearGradient gradient,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    int maxLines = 1,
+  }) {
+    return Container(
+      decoration: AppColors.createGlassmorphism(opacity: 0.15),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        validator: validator,
+        maxLines: maxLines,
+        style: GoogleFonts.poppins(color: AppColors.white),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.poppins(color: AppColors.white.withOpacity(0.8)),
+          prefixIcon: Container(
+            margin: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: AppColors.white, size: 20),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.transparent,
+          errorStyle: GoogleFonts.poppins(color: AppColors.fitnessRed),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveRecipe(
+    GlobalKey<FormState> formKey,
+    TextEditingController nameController,
+    TextEditingController caloriasController,
+    TextEditingController proteinasController,
+    TextEditingController grasasController,
+    TextEditingController carbohidratosController,
+    TextEditingController descripcionController,
+    String selectedCategory,
+    BuildContext context,
+  ) async {
+    if (formKey.currentState!.validate()) {
+      try {
+        final newRecipe = Nutricion(
+          name: nameController.text,
+          calorias: double.parse(caloriasController.text),
+          proteinas: double.parse(proteinasController.text),
+          grasas: double.parse(grasasController.text),
+          carbohidratos: double.parse(carbohidratosController.text),
+          categoria: selectedCategory,
+          descripcion: descripcionController.text.isEmpty ? null : descripcionController.text,
+        );
+
+        await _dbHelper.addNutrition(newRecipe);
+        await _loadNutritionData(); // Reload the data
+
+        Navigator.pop(context);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Receta "${nameController.text}" agregada exitosamente'),
+            backgroundColor: AppColors.nutritionGreen,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar la receta: $e'),
+            backgroundColor: AppColors.fitnessRed,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   void _editMeal(Map<String, dynamic> meal) {
@@ -664,7 +1107,7 @@ class _NutritionTabState extends State<NutritionTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${food['name']} agregado'),
-        backgroundColor: AppColors.pastelOrange,
+        backgroundColor: AppColors.nutritionOrange,
       ),
     );
   }

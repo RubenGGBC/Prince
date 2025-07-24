@@ -237,4 +237,186 @@ class AppColors {
       ],
     );
   }
+
+  // ==================== NUEVOS COLORES MODERNOS ====================
+  
+  // Colores para nutrición (verdes y naranjas modernos)
+  static const Color nutritionGreen = Color(0xFF10B981);
+  static const Color nutritionLightGreen = Color(0xFF34D399);
+  static const Color nutritionOrange = Color(0xFFF59E0B);
+  static const Color nutritionLightOrange = Color(0xFFFBBF24);
+  
+  // Colores para fitness (rojos y morados vibrantes)
+  static const Color fitnessRed = Color(0xFFEF4444);
+  static const Color fitnessLightRed = Color(0xFFF87171);
+  static const Color fitnessPurple = Color(0xFF8B5CF6);
+  static const Color fitnessLightPurple = Color(0xFFA78BFA);
+  
+  // Gradientes modernos para nutrición
+  static const LinearGradient nutritionGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF10B981), // Verde esmeralda
+      Color(0xFF059669), // Verde más oscuro
+      Color(0xFF047857), // Verde profundo
+    ],
+  );
+  
+  static const LinearGradient orangeGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFF59E0B), // Ámbar
+      Color(0xFFD97706), // Ámbar oscuro
+      Color(0xFFB45309), // Ámbar profundo
+    ],
+  );
+  
+  // Gradientes modernos para fitness
+  static const LinearGradient fitnessGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFFEF4444), // Rojo vibrante
+      Color(0xFFDC2626), // Rojo más oscuro
+      Color(0xFFB91C1C), // Rojo profundo
+    ],
+  );
+  
+  static const LinearGradient purpleGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF8B5CF6), // Violeta
+      Color(0xFF7C3AED), // Violeta oscuro
+      Color(0xFF6D28D9), // Violeta profundo
+    ],
+  );
+  
+  // Gradiente rainbow moderno
+  static const LinearGradient rainbowGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF6366F1), // Índigo
+      Color(0xFF8B5CF6), // Violeta
+      Color(0xFFEC4899), // Rosa
+      Color(0xFFF59E0B), // Ámbar
+      Color(0xFF10B981), // Verde esmeralda
+    ],
+  );
+  
+  // Gradiente sunset
+  static const LinearGradient sunsetGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color(0xFFFBBF24), // Amarillo dorado
+      Color(0xFFF59E0B), // Ámbar
+      Color(0xFFEF4444), // Rojo
+      Color(0xFFDC2626), // Rojo oscuro
+      Color(0xFF7C2D12), // Rojo muy oscuro
+    ],
+  );
+  
+  // Gradiente aurora
+  static const LinearGradient auroraGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF06B6D4), // Cian
+      Color(0xFF3B82F6), // Azul
+      Color(0xFF8B5CF6), // Violeta
+      Color(0xFFEC4899), // Rosa
+      Color(0xFF10B981), // Verde
+    ],
+  );
+  
+  // Gradiente neon
+  static const LinearGradient neonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF00F5FF), // Cian eléctrico
+      Color(0xFF0080FF), // Azul eléctrico
+      Color(0xFF8000FF), // Violeta eléctrico
+      Color(0xFFFF0080), // Rosa eléctrico
+    ],
+  );
+  
+  // Gradiente mint fresh
+  static const LinearGradient mintGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF6EE7B7), // Verde menta
+      Color(0xFF34D399), // Verde esmeralda claro
+      Color(0xFF10B981), // Verde esmeralda
+      Color(0xFF059669), // Verde profundo
+    ],
+  );
+  
+  // Función para crear gradientes dinámicos
+  static LinearGradient createDynamicGradient({
+    required List<Color> colors,
+    Alignment begin = Alignment.topLeft,
+    Alignment end = Alignment.bottomRight,
+  }) {
+    return LinearGradient(
+      begin: begin,
+      end: end,
+      colors: colors,
+    );
+  }
+  
+  // Función para crear efectos de glassmorphism
+  static BoxDecoration createGlassmorphism({
+    double opacity = 0.15,
+    double blurRadius = 20,
+    double borderRadius = 16,
+    Color? borderColor,
+  }) {
+    return BoxDecoration(
+      color: Colors.white.withOpacity(opacity),
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: Border.all(
+        color: borderColor ?? Colors.white.withOpacity(0.2),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: blurRadius,
+          spreadRadius: 2,
+          offset: Offset(0, 8),
+        ),
+      ],
+    );
+  }
+  
+  // Función para crear efectos neomorfism
+  static BoxDecoration createNeumorphism({
+    Color? backgroundColor,
+    double borderRadius = 16,
+    double blurRadius = 20,
+  }) {
+    final bgColor = backgroundColor ?? AppColors.surfaceBlack;
+    return BoxDecoration(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(borderRadius),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.white.withOpacity(0.1),
+          blurRadius: blurRadius,
+          offset: Offset(-8, -8),
+        ),
+        BoxShadow(
+          color: Colors.black.withOpacity(0.3),
+          blurRadius: blurRadius,
+          offset: Offset(8, 8),
+        ),
+      ],
+    );
+  }
 }

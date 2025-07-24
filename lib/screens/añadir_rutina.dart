@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
 import '../domain/exercise.dart';
 import '../domain/rutina.dart';
-import '../database/DatabaseHelper.dart';
+import '../database/database_helper.dart';
 
 class CrearRutinaScreen extends StatefulWidget {
   @override
@@ -168,8 +168,9 @@ class _CrearRutinaScreenState extends State<CrearRutinaScreen> {
             Container(
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
+                gradient: AppColors.fitnessGradient,
                 borderRadius: BorderRadius.circular(12),
+                boxShadow: AppColors.createBlueShadow(AppColors.fitnessRed),
               ),
               child: Icon(
                 Icons.playlist_add_rounded,
@@ -193,11 +194,11 @@ class _CrearRutinaScreenState extends State<CrearRutinaScreen> {
             margin: EdgeInsets.only(right: 8),
             child: TextButton.icon(
               onPressed: _saveRoutine,
-              icon: Icon(Icons.save_rounded, color: AppColors.pastelGreen, size: 18),
+              icon: Icon(Icons.save_rounded, color: AppColors.nutritionGreen, size: 18),
               label: Text(
                 'Guardar',
                 style: GoogleFonts.poppins(
-                  color: AppColors.pastelGreen,
+                  color: AppColors.nutritionGreen,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -409,170 +410,294 @@ class _CrearRutinaScreenState extends State<CrearRutinaScreen> {
 
   Widget _buildBasicInfo() {
     return Container(
-      padding: EdgeInsets.all(20),
+      padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.cardBlack,
-        borderRadius: BorderRadius.circular(16),
+        gradient: AppColors.techGradient,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.pastelBlue.withOpacity(0.3),
-          width: 1,
+          color: AppColors.pastelBlue.withOpacity(0.4),
+          width: 1.5,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: AppColors.pastelBlue,
-                size: 24,
-              ),
-              SizedBox(width: 12),
-              Text(
-                'Información Básica',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.white,
-                ),
-              ),
-            ],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.pastelBlue.withOpacity(0.2),
+            blurRadius: 20,
+            spreadRadius: 2,
+            offset: Offset(0, 8),
           ),
-          SizedBox(height: 20),
-
-          TextFormField(
-            controller: _nombreController,
-            style: GoogleFonts.poppins(color: AppColors.white),
-            decoration: InputDecoration(
-              labelText: 'Nombre de la rutina',
-              labelStyle: GoogleFonts.poppins(color: AppColors.grey),
-              hintText: 'Ej: Push Day, Rutina de Piernas',
-              hintStyle: GoogleFonts.poppins(color: AppColors.grey.withOpacity(0.7)),
-              prefixIcon: Icon(Icons.title_rounded, color: AppColors.pastelPink),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.grey),
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.pastelBlue),
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Ingresa un nombre para la rutina';
-              }
-              return null;
-            },
-          ),
-          SizedBox(height: 20),
-
-          TextFormField(
-            controller: _descripcionController,
-            style: GoogleFonts.poppins(color: AppColors.white),
-            maxLines: 2,
-            decoration: InputDecoration(
-              labelText: 'Descripción',
-              labelStyle: GoogleFonts.poppins(color: AppColors.grey),
-              hintText: 'Describe los objetivos de esta rutina',
-              hintStyle: GoogleFonts.poppins(color: AppColors.grey.withOpacity(0.7)),
-              prefixIcon: Icon(Icons.description_rounded, color: AppColors.pastelGreen),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.grey),
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.pastelBlue),
-              ),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Agrega una descripción';
-              }
-              return null;
-            },
-          ),
-          SizedBox(height: 20),
-
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedCategoria,
-                  dropdownColor: AppColors.cardBlack,
-                  style: GoogleFonts.poppins(color: AppColors.white),
-                  decoration: InputDecoration(
-                    labelText: 'Categoría',
-                    labelStyle: GoogleFonts.poppins(color: AppColors.grey),
-                    prefixIcon: Icon(_getCategoriaIcon(_selectedCategoria), color: AppColors.pastelPurple),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.grey),
-                    ),
-                  ),
-                  items: _categorias.map((categoria) => DropdownMenuItem(
-                    value: categoria,
-                    child: Row(
-                      children: [
-                        Icon(_getCategoriaIcon(categoria), color: _getCategoriaColor(categoria), size: 18),
-                        SizedBox(width: 8),
-                        Text(categoria),
-                      ],
-                    ),
-                  )).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCategoria = value!;
-                    });
-                  },
-                ),
-              ),
-              SizedBox(width: 20),
-              Expanded(
-                child: TextFormField(
-                  controller: _duracionController,
-                  keyboardType: TextInputType.number,
-                  style: GoogleFonts.poppins(color: AppColors.white),
-                  decoration: InputDecoration(
-                    labelText: 'Duración (min)',
-                    labelStyle: GoogleFonts.poppins(color: AppColors.grey),
-                    hintText: '60',
-                    hintStyle: GoogleFonts.poppins(color: AppColors.grey.withOpacity(0.7)),
-                    prefixIcon: Icon(Icons.timer_rounded, color: AppColors.pastelOrange),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.grey),
-                    ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.pastelBlue),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Duración requerida';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Debe ser un número';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            spreadRadius: 1,
+            offset: Offset(0, 4),
           ),
         ],
+      ),
+      child: Container(
+        decoration: AppColors.createGlassmorphism(
+          opacity: 0.1,
+          blurRadius: 25,
+          borderRadius: 16,
+          borderColor: AppColors.pastelBlue.withOpacity(0.3),
+        ),
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with gradient background
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: AppColors.auroraGradient,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: AppColors.createBlueShadow(AppColors.pastelBlue),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.info_outline_rounded,
+                      color: AppColors.white,
+                      size: 20,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Información Básica',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.white,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 24),
+
+            // Nombre field with glassmorphism
+            _buildGlassFormField(
+              controller: _nombreController,
+              label: 'Nombre de la rutina',
+              hint: 'Ej: Push Day, Rutina de Piernas',
+              icon: Icons.title_rounded,
+              iconColor: AppColors.nutritionGreen,
+              gradient: AppColors.nutritionGradient,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Ingresa un nombre para la rutina';
+                }
+                return null;
+              },
+            ),
+            SizedBox(height: 20),
+
+            // Descripción field with glassmorphism
+            _buildGlassFormField(
+              controller: _descripcionController,
+              label: 'Descripción',
+              hint: 'Describe los objetivos de esta rutina',
+              icon: Icons.description_rounded,
+              iconColor: AppColors.fitnessRed,
+              gradient: AppColors.fitnessGradient,
+              maxLines: 2,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Agrega una descripción';
+                }
+                return null;
+              },
+            ),
+            SizedBox(height: 20),
+
+            // Row with category and duration
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: AppColors.createGlassmorphism(
+                      opacity: 0.08,
+                      blurRadius: 15,
+                      borderRadius: 12,
+                      borderColor: AppColors.pastelPurple.withOpacity(0.3),
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedCategoria,
+                      dropdownColor: AppColors.cardBlack,
+                      style: GoogleFonts.poppins(color: AppColors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Categoría',
+                        labelStyle: GoogleFonts.poppins(
+                          color: AppColors.pastelPurple,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        prefixIcon: Container(
+                          margin: EdgeInsets.all(8),
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: AppColors.purpleGradient,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            _getCategoriaIcon(_selectedCategoria),
+                            color: AppColors.white,
+                            size: 18,
+                          ),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.transparent,
+                      ),
+                      items: _categorias.map((categoria) => DropdownMenuItem(
+                        value: categoria,
+                        child: Row(
+                          children: [
+                            Icon(_getCategoriaIcon(categoria), color: _getCategoriaColor(categoria), size: 18),
+                            SizedBox(width: 8),
+                            Text(categoria),
+                          ],
+                        ),
+                      )).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategoria = value!;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: _buildGlassFormField(
+                    controller: _duracionController,
+                    label: 'Duración (min)',
+                    hint: '60',
+                    icon: Icons.timer_rounded,
+                    iconColor: AppColors.nutritionOrange,
+                    gradient: AppColors.orangeGradient,
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Duración requerida';
+                      }
+                      if (int.tryParse(value) == null) {
+                        return 'Debe ser un número';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method to create glassmorphism form fields
+  Widget _buildGlassFormField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required Color iconColor,
+    required LinearGradient gradient,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: AppColors.createGlassmorphism(
+        opacity: 0.08,
+        blurRadius: 15,
+        borderRadius: 12,
+        borderColor: iconColor.withOpacity(0.3),
+      ),
+      child: TextFormField(
+        controller: controller,
+        style: GoogleFonts.poppins(
+          color: AppColors.white,
+          fontWeight: FontWeight.w500,
+        ),
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.poppins(
+            color: iconColor,
+            fontWeight: FontWeight.w500,
+          ),
+          hintText: hint,
+          hintStyle: GoogleFonts.poppins(
+            color: AppColors.grey.withOpacity(0.7),
+          ),
+          prefixIcon: Container(
+            margin: EdgeInsets.all(8),
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: iconColor.withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: AppColors.white,
+              size: 18,
+            ),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.transparent,
+          errorStyle: GoogleFonts.poppins(
+            color: AppColors.fitnessRed,
+            fontSize: 12,
+          ),
+        ),
+        validator: validator,
       ),
     );
   }
 
   Widget _buildSelectedExercises() {
     return Container(
-      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBlack,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.pastelGreen.withOpacity(0.3),
-          width: 1,
-        ),
+        gradient: AppColors.nutritionGradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppColors.createBlueShadow(AppColors.nutritionGreen),
       ),
-      child: Column(
+      child: Container(
+        padding: EdgeInsets.all(20),
+        decoration: AppColors.createGlassmorphism(
+          opacity: 0.1,
+          borderRadius: 20,
+          borderColor: AppColors.nutritionGreen.withOpacity(0.3),
+        ),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -580,10 +705,24 @@ class _CrearRutinaScreenState extends State<CrearRutinaScreen> {
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.playlist_play_rounded,
-                    color: AppColors.pastelGreen,
-                    size: 24,
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: AppColors.mintGradient,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.nutritionGreen.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.playlist_play_rounded,
+                      color: AppColors.white,
+                      size: 20,
+                    ),
                   ),
                   SizedBox(width: 12),
                   Text(
@@ -599,24 +738,28 @@ class _CrearRutinaScreenState extends State<CrearRutinaScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.pastelGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.pastelGreen.withOpacity(0.3),
-                    width: 1,
-                  ),
+                  gradient: AppColors.auroraGradient,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.nutritionGreen.withOpacity(0.4),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.fitness_center, color: AppColors.pastelGreen, size: 16),
+                    Icon(Icons.fitness_center, color: AppColors.white, size: 16),
                     SizedBox(width: 4),
                     Text(
                       '${_selectedExercises.length}',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.pastelGreen,
+                        color: AppColors.white,
                       ),
                     ),
                   ],
@@ -669,104 +812,80 @@ class _CrearRutinaScreenState extends State<CrearRutinaScreen> {
             ),
         ],
       ),
+    )
     );
   }
 
   Widget _buildSelectedExerciseItem(Exercise exercise, int index) {
     final color = _getColorByMuscleGroup(exercise.grupoMuscular);
 
-    return Container(
+    return Card(
       key: ValueKey(exercise.id),
-      margin: EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceBlack,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+      margin: EdgeInsets.only(bottom: 12),
+      color: AppColors.surfaceBlack,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: color.withOpacity(0.4), width: 1),
       ),
-      child: ListTile(
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: ListTile(
+          leading: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
                 '${index + 1}',
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
               ),
-            ),
-            SizedBox(width: 8),
-            Icon(Icons.drag_indicator_rounded, color: AppColors.grey, size: 20),
-          ],
-        ),
-        title: Row(
-          children: [
-            Icon(_getIconByMuscleGroup(exercise.grupoMuscular), color: color, size: 16),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                exercise.nombre,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Row(
-          children: [
-            Icon(Icons.label_outline, color: AppColors.grey, size: 12),
-            SizedBox(width: 4),
-            Text(
-              exercise.grupoMuscular,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: AppColors.grey,
-              ),
-            ),
-            SizedBox(width: 12),
-            Icon(Icons.repeat, color: AppColors.grey, size: 12),
-            SizedBox(width: 4),
-            Text(
-              '${exercise.series}x${exercise.repeticiones}',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: AppColors.grey,
-              ),
-            ),
-            SizedBox(width: 12),
-            Icon(Icons.monitor_weight, color: AppColors.grey, size: 12),
-            SizedBox(width: 4),
-            Text(
-              '${exercise.peso}kg',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: AppColors.grey,
-              ),
-            ),
-          ],
-        ),
-        trailing: Container(
-          decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.1),
-            shape: BoxShape.circle,
+              SizedBox(width: 12),
+              Icon(Icons.drag_indicator_rounded, color: AppColors.grey, size: 24),
+            ],
           ),
-          child: IconButton(
-            icon: Icon(Icons.remove_circle_rounded, color: Colors.red, size: 20),
+          title: Text(
+            exercise.nombre,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.white,
+            ),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: [
+                _buildInfoChip(
+                  icon: _getIconByMuscleGroup(exercise.grupoMuscular),
+                  label: exercise.grupoMuscular,
+                  color: color,
+                ),
+                _buildInfoChip(
+                  icon: Icons.repeat_rounded,
+                  label: '${exercise.series}x${exercise.repeticiones}',
+                  color: AppColors.pastelBlue,
+                ),
+                _buildInfoChip(
+                  icon: Icons.fitness_center_rounded,
+                  label: '${exercise.peso}kg',
+                  color: AppColors.pastelGreen,
+                ),
+              ],
+            ),
+          ),
+          trailing: IconButton(
+            icon: Icon(Icons.delete_sweep_rounded, color: AppColors.fitnessRed, size: 24),
             onPressed: () {
               setState(() {
                 _selectedExercises.removeAt(index);
               });
             },
+            tooltip: 'Eliminar ejercicio',
           ),
         ),
       ),
@@ -913,61 +1032,45 @@ class _CrearRutinaScreenState extends State<CrearRutinaScreen> {
   Widget _buildExerciseSelectItem(Exercise exercise, bool isSelected) {
     final color = _getColorByMuscleGroup(exercise.grupoMuscular);
 
-    return Container(
+    return Card(
       margin: EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? color.withOpacity(0.1) : AppColors.cardBlack,
-        borderRadius: BorderRadius.circular(12),
-        border: isSelected ? Border.all(color: color, width: 2) : Border.all(color: AppColors.grey.withOpacity(0.2)),
+      elevation: 0,
+      color: isSelected ? color.withOpacity(0.2) : AppColors.surfaceBlack,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isSelected ? color : AppColors.grey.withOpacity(0.3),
+          width: isSelected ? 2 : 1,
+        ),
       ),
       child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.15),
           child: Icon(
             _getIconByMuscleGroup(exercise.grupoMuscular),
             color: color,
-            size: 20,
+            size: 22,
           ),
         ),
         title: Text(
           exercise.nombre,
           style: GoogleFonts.poppins(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w500,
             color: AppColors.white,
           ),
         ),
-        subtitle: Row(
-          children: [
-            Icon(Icons.label_outline, color: AppColors.grey, size: 12),
-            SizedBox(width: 4),
-            Text(exercise.grupoMuscular, style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey)),
-            SizedBox(width: 8),
-            Icon(Icons.repeat, color: AppColors.grey, size: 12),
-            SizedBox(width: 4),
-            Text('${exercise.series}x${exercise.repeticiones}', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey)),
-            SizedBox(width: 8),
-            Icon(Icons.monitor_weight, color: AppColors.grey, size: 12),
-            SizedBox(width: 4),
-            Text('${exercise.peso}kg', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.grey)),
-          ],
+        subtitle: Text(
+          '${exercise.series}x${exercise.repeticiones}  •  ${exercise.peso}kg',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            color: AppColors.grey,
+          ),
         ),
-        trailing: AnimatedContainer(
-          duration: Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            isSelected ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
-            color: isSelected ? color : AppColors.grey,
-            size: 24,
-          ),
+        trailing: Icon(
+          isSelected ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
+          color: isSelected ? color : AppColors.grey,
+          size: 28,
         ),
         onTap: () {
           setState(() {
@@ -979,6 +1082,24 @@ class _CrearRutinaScreenState extends State<CrearRutinaScreen> {
           });
         },
       ),
+    );
+  }
+
+  // Helper method to create styled info chips
+  Widget _buildInfoChip({required IconData icon, required String label, required Color color}) {
+    return Chip(
+      avatar: Icon(icon, color: color, size: 16),
+      label: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: AppColors.white.withOpacity(0.9),
+        ),
+      ),
+      backgroundColor: color.withOpacity(0.15),
+      side: BorderSide(color: color.withOpacity(0.3)),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     );
   }
 

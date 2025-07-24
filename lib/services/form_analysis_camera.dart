@@ -1,4 +1,4 @@
-// lib/services/form_analysis_camera.dart - MEJORADO CON IA
+// lib/services/form_analysis_camera.dart - ML KIT ONLY VERSION
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -10,9 +10,8 @@ import '../models/form_score.dart';
 import '../domain/exercise.dart';
 import '../domain/user.dart';
 import '../models/exercise_analyzer.dart';
-import 'ai_from_coach.dart';
 
-/// 📹 CONTROLADOR PRINCIPAL CON IA INTEGRADA
+/// 📹 CONTROLADOR PRINCIPAL SOLO ML KIT
 class FormAnalysisCamera {
   // 🎥 Controladores de cámara
   CameraController? _cameraController;
@@ -29,39 +28,32 @@ class FormAnalysisCamera {
   );
   final ExerciseAnalyzer _exerciseAnalyzer = ExerciseAnalyzer();
 
-  // 🤖 NUEVO: Entrenador IA híbrido
-  final AIFormCoach _aiCoach = AIFormCoach();
-
   // 📊 Estado del análisis
   StreamController<FormScore>? _formScoreStream;
-  StreamController<RealTimeCoaching>? _coachingStream; // 🆕 Coaching en tiempo real
   final List<FormScore> _currentSetScores = [];
   ExerciseType _currentExerciseType = ExerciseType.generic;
   Exercise? _currentExercise;
   User? _currentUser;
 
-  // 🎯 Callbacks mejorados
+  // 🎯 Callbacks simplificados
   Function(FormScore)? onFormScoreUpdate;
-  Function(RealTimeCoaching)? onRealTimeCoaching; // 🆕 Coaching callback
   Function(String)? onError;
   Function(FormFeedback)? onSetComplete;
-  Function(PostWorkoutAnalysis)? onPostWorkoutAnalysis; // 🆕 Análisis post-entrenamiento
 
-  // ⏱️ Control de frecuencia de análisis IA
-  DateTime _lastAIAnalysis = DateTime.now();
-  static const _aiAnalysisInterval = Duration(seconds: 2); // IA cada 2 segundos
+  // ⏱️ Control de frecuencia de análisis ML Kit
+  DateTime _lastAnalysis = DateTime.now();
+  static const _analysisInterval = Duration(milliseconds: 100); // ML Kit cada 100ms
 
   // ✅ Getters públicos
   bool get isCameraInitialized => _isCameraInitialized;
   bool get isAnalyzing => _isAnalyzing;
   CameraController? get cameraController => _cameraController;
   Stream<FormScore>? get formScoreStream => _formScoreStream?.stream;
-  Stream<RealTimeCoaching>? get coachingStream => _coachingStream?.stream; // 🆕
 
   /// 🚀 INICIALIZAR CÁMARA Y PERMISOS
   Future<bool> initialize() async {
     try {
-      print('📱 Inicializando FormAnalysisCamera con IA...');
+      print('📱 Inicializando FormAnalysisCamera con ML Kit...');
 
       // 1. Verificar y solicitar permisos
       final cameraPermission = await Permission.camera.request();
@@ -79,9 +71,8 @@ class FormAnalysisCamera {
 
       // 3. Inicializar streams
       _formScoreStream = StreamController<FormScore>.broadcast();
-      _coachingStream = StreamController<RealTimeCoaching>.broadcast(); // 🆕
 
-      print('✅ FormAnalysisCamera con IA inicializada correctamente');
+      print('✅ FormAnalysisCamera con ML Kit inicializada correctamente');
       return true;
 
     } catch (e) {
@@ -91,7 +82,7 @@ class FormAnalysisCamera {
     }
   }
 
-  /// 🎯 CONFIGURAR EJERCICIO CON CONSEJO PRE-ENTRENAMIENTO
+  /// 🎯 CONFIGURAR EJERCICIO
   Future<bool> setupCameraForExercise(Exercise exercise, {User? user}) async {
     try {
       print('🏋️ Configurando cámara para: ${exercise.nombre}');
@@ -102,25 +93,7 @@ class FormAnalysisCamera {
       // 1. Determinar tipo de ejercicio
       _currentExerciseType = _determineExerciseType(exercise.nombre);
 
-      // 2. 🆕 OBTENER CONSEJO PRE-ENTRENAMIENTO DE IA
-      if (user != null) {
-        try {
-          final preWorkoutAdvice = await _aiCoach.getPreWorkoutAdvice(exercise, user);
-          print('🤖 Consejo pre-entrenamiento recibido');
-
-          // Notificar consejo pre-entrenamiento
-          onRealTimeCoaching?.call(RealTimeCoaching(
-            message: preWorkoutAdvice.aiAdvice,
-            motivation: "🎯 Consejo de PrinceIA",
-            score: 10.0,
-            isPositive: true,
-          ));
-        } catch (e) {
-          print('⚠️ Error obteniendo consejo pre-entrenamiento: $e');
-        }
-      }
-
-      // 3. Seleccionar cámara según la posición requerida
+      // 2. Seleccionar cámara según la posición requerida
       CameraDescription selectedCamera;
       final cameraPosition = _currentExerciseType.cameraPosition;
 
@@ -136,7 +109,7 @@ class FormAnalysisCamera {
         );
       }
 
-      // 4. Limpiar controlador anterior si existe
+      // 3. Limpiar controlador anterior si existe
       if (_cameraController != null) {
         await _cameraController!.dispose();
         _cameraController = null;

@@ -7,7 +7,7 @@ import 'utils/app_colors.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';  // ← NUEVO: Para Windows
 import 'dart:io';  // ← NUEVO: Para detectar plataforma
-import 'database/DatabaseHelper.dart';
+import 'database/database_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

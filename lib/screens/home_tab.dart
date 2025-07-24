@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:untitled2/screens/progress_tab.dart';
+import 'progress_tab.dart';
+import 'nutrition_tab.dart';
 import '../utils/app_colors.dart';
 import '../domain/exercise.dart';
 import '../domain/user.dart'; // ✅ IMPORTAR User
-import '../database/DatabaseHelper.dart';
+import '../database/database_helper.dart';
 import 'exercises_tab.dart';
 import 'añadir_rutina.dart';
 import 'workout_session_screen.dart';
 import 'prince_ai_chat_screen.dart';
+import 'ml_simple.dart';
 
 class HomeTab extends StatefulWidget {
   // ✅ AGREGAR PARÁMETRO REQUERIDO User
@@ -92,6 +94,12 @@ class _HomeTabState extends State<HomeTab> {
 
                 // PÁGINA 2: PROGRESO
                 ProgressTab(user: widget.user),
+
+                // 🥗 PÁGINA 3: NUTRICIÓN
+                NutritionTab(user: widget.user),
+
+                // PÁGINA 4: PERFIL
+                _buildProfilePage(),
               ],
             ),
 
@@ -247,6 +255,36 @@ class _HomeTabState extends State<HomeTab> {
             height: 8,
             decoration: BoxDecoration(
               color: _internalPageIndex == 1 ? AppColors.pastelPurple : AppColors.grey,
+              shape: BoxShape.circle,
+            ),
+          ),
+          SizedBox(width: 4),
+          // Punto Progreso
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: _internalPageIndex == 2 ? AppColors.pastelGreen : AppColors.grey,
+              shape: BoxShape.circle,
+            ),
+          ),
+          SizedBox(width: 4),
+          // Punto Nutrición
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: _internalPageIndex == 3 ? AppColors.pastelOrange : AppColors.grey,
+              shape: BoxShape.circle,
+            ),
+          ),
+          SizedBox(width: 4),
+          // Punto Perfil
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: _internalPageIndex == 4 ? AppColors.pastelPink : AppColors.grey,
               shape: BoxShape.circle,
             ),
           ),
@@ -530,6 +568,14 @@ class _HomeTabState extends State<HomeTab> {
               isTablet,
               isDesktop,
             ),
+            _buildManagementButton(
+              'ML Kit Simple',
+              Icons.camera_alt,
+              AppColors.pastelPink,
+                  () => _navigateToMLKit(),
+              isTablet,
+              isDesktop,
+            ),
           ],
         ),
       ],
@@ -625,6 +671,12 @@ class _HomeTabState extends State<HomeTab> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [AppColors.pastelOrange, AppColors.pastelPink, AppColors.pastelBlue],
+        );
+      case 'ML Kit Simple':
+        return LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.pastelPink, AppColors.pastelOrange, AppColors.pastelGreen],
         );
       default:
         return LinearGradient(
@@ -836,8 +888,645 @@ class _HomeTabState extends State<HomeTab> {
     Navigator.push(context, MaterialPageRoute(builder: (context) => ExercisesTab()));
   }
 
+  void _navigateToMLKit() {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => MLSimple()));
+  }
+
   void _startWorkoutSession() {
     Navigator.push(context, MaterialPageRoute(builder: (context) => WorkoutSessionScreen()));
+  }
+
+  // 👤 PÁGINA DE PERFIL
+  Widget _buildProfilePage() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Header con foto de perfil
+          _buildProfileHeader(),
+
+          // Estadísticas rápidas
+          _buildProfileQuickStats(),
+
+          // Información personal
+          _buildPersonalInfo(),
+
+          // Configuraciones
+          _buildSettings(),
+
+          // Opciones adicionales
+          _buildAdditionalOptions(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.pastelPink,
+            AppColors.pastelPurple,
+            AppColors.pastelBlue,
+          ],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        children: [
+          SizedBox(height: 20),
+
+          // Foto de perfil
+          GestureDetector(
+            onTap: () {
+              _changeProfilePhoto();
+            },
+            child: Stack(
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.white.withOpacity(0.2),
+                    border: Border.all(
+                      color: AppColors.white,
+                      width: 3,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.person,
+                    size: 50,
+                    color: AppColors.white,
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.camera_alt,
+                      size: 16,
+                      color: AppColors.primaryBlack,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 16),
+
+          // Nombre y email
+          Text(
+            widget.user.name,
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.white,
+            ),
+          ),
+          Text(
+            widget.user.email,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: AppColors.white.withOpacity(0.8),
+            ),
+          ),
+
+          SizedBox(height: 16),
+
+          // Botón editar perfil
+          ElevatedButton(
+            onPressed: () {
+              _editProfile();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.white,
+              foregroundColor: AppColors.primaryBlack,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            ),
+            child: Text(
+              'Editar Perfil',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileQuickStats() {
+    final Map<String, dynamic> _userStats = {
+      'totalWorkouts': 48,
+      'currentStreak': 5,
+      'averageWorkoutTime': 45,
+    };
+
+    return Padding(
+      padding: EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatItem(
+              'Entrenamientos',
+              '${_userStats['totalWorkouts']}',
+              Icons.fitness_center,
+              AppColors.pastelBlue,
+            ),
+          ),
+          Expanded(
+            child: _buildStatItem(
+              'Racha actual',
+              '${_userStats['currentStreak']} días',
+              Icons.local_fire_department,
+              AppColors.pastelOrange,
+            ),
+          ),
+          Expanded(
+            child: _buildStatItem(
+              'Tiempo promedio',
+              '${_userStats['averageWorkoutTime']} min',
+              Icons.timer,
+              AppColors.pastelGreen,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBlack,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          SizedBox(height: 8),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.white,
+            ),
+          ),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              color: AppColors.grey,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonalInfo() {
+    final Map<String, dynamic> _userProfile = {
+      'age': 25,
+      'weight': 75.2,
+      'height': 175,
+      'gender': 'Masculino',
+      'goal': 'Perder peso',
+      'activityLevel': 'Moderado',
+      'joinDate': '2024-01-15',
+    };
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Información Personal',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: AppColors.white,
+            ),
+          ),
+          SizedBox(height: 16),
+
+          _buildInfoCard([
+            _buildInfoItem('Edad', '${_userProfile['age']} años', Icons.cake),
+            _buildInfoItem('Peso', '${_userProfile['weight']} kg', Icons.monitor_weight),
+            _buildInfoItem('Altura', '${_userProfile['height']} cm', Icons.height),
+            _buildInfoItem('Género', _userProfile['gender'], Icons.person),
+          ]),
+
+          SizedBox(height: 16),
+
+          _buildInfoCard([
+            _buildInfoItem('Objetivo', _userProfile['goal'], Icons.flag),
+            _buildInfoItem('Nivel de actividad', _userProfile['activityLevel'], Icons.directions_run),
+            _buildInfoItem('Miembro desde', _formatDate(_userProfile['joinDate']), Icons.calendar_today),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBlack,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value, IconData icon) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.pastelPurple),
+      title: Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          color: AppColors.grey,
+        ),
+      ),
+      subtitle: Text(
+        value,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.white,
+        ),
+      ),
+      onTap: () {
+        _editField(label, value);
+      },
+    );
+  }
+
+  Widget _buildSettings() {
+    return Padding(
+      padding: EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Configuración',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: AppColors.white,
+            ),
+          ),
+          SizedBox(height: 16),
+
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.cardBlack,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                _buildSettingItem(
+                  'Notificaciones',
+                  'Recordatorios de entrenamientos',
+                  Icons.notifications,
+                  AppColors.pastelBlue,
+                      () => _openNotificationSettings(),
+                ),
+                _buildSettingItem(
+                  'Privacidad',
+                  'Configuración de datos',
+                  Icons.privacy_tip,
+                  AppColors.pastelGreen,
+                      () => _openPrivacySettings(),
+                ),
+                _buildSettingItem(
+                  'Unidades',
+                  'Kg, cm, calorías',
+                  Icons.straighten,
+                  AppColors.pastelOrange,
+                      () => _openUnitsSettings(),
+                ),
+                _buildSettingItem(
+                  'Respaldo',
+                  'Sincronizar datos',
+                  Icons.backup,
+                  AppColors.pastelPurple,
+                      () => _openBackupSettings(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingItem(
+      String title,
+      String subtitle,
+      IconData icon,
+      Color color,
+      VoidCallback onTap,
+      ) {
+    return ListTile(
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.white,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          color: AppColors.grey,
+        ),
+      ),
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        color: AppColors.grey,
+        size: 16,
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildAdditionalOptions() {
+    return Padding(
+      padding: EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Más Opciones',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: AppColors.white,
+            ),
+          ),
+          SizedBox(height: 16),
+
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.cardBlack,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                _buildActionItem(
+                  'Ayuda y Soporte',
+                  Icons.help,
+                  AppColors.pastelBlue,
+                      () => _openHelp(),
+                ),
+                _buildActionItem(
+                  'Acerca de',
+                  Icons.info,
+                  AppColors.pastelGreen,
+                      () => _openAbout(),
+                ),
+                _buildActionItem(
+                  'Calificar App',
+                  Icons.star,
+                  AppColors.pastelOrange,
+                      () => _rateApp(),
+                ),
+                _buildActionItem(
+                  'Cerrar Sesión',
+                  Icons.logout,
+                  Colors.red,
+                      () => _logout(),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionItem(
+      String title,
+      IconData icon,
+      Color color,
+      VoidCallback onTap,
+      ) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppColors.white,
+        ),
+      ),
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        color: AppColors.grey,
+        size: 16,
+      ),
+      onTap: onTap,
+    );
+  }
+
+  String _formatDate(String dateString) {
+    final date = DateTime.parse(dateString);
+    final months = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
+  void _changeProfilePhoto() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBlack,
+        title: Text(
+          'Cambiar Foto',
+          style: GoogleFonts.poppins(color: AppColors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.camera_alt, color: AppColors.pastelBlue),
+              title: Text('Tomar foto', style: GoogleFonts.poppins(color: AppColors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                print("Abrir cámara");
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library, color: AppColors.pastelGreen),
+              title: Text('Elegir de galería', style: GoogleFonts.poppins(color: AppColors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                print("Abrir galería");
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editProfile() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Pantalla de edición próximamente'),
+        backgroundColor: AppColors.pastelBlue,
+      ),
+    );
+  }
+
+  void _editField(String field, String currentValue) {
+    print("Editar $field: $currentValue");
+  }
+
+  void _openNotificationSettings() {
+    print("Configuración de notificaciones");
+  }
+
+  void _openPrivacySettings() {
+    print("Configuración de privacidad");
+  }
+
+  void _openUnitsSettings() {
+    print("Configuración de unidades");
+  }
+
+  void _openBackupSettings() {
+    print("Configuración de respaldo");
+  }
+
+  void _openHelp() {
+    print("Abrir ayuda");
+  }
+
+  void _openAbout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBlack,
+        title: Text(
+          'Prince App',
+          style: GoogleFonts.poppins(color: AppColors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.fitness_center,
+              size: 60,
+              color: AppColors.pastelPink,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Versión 1.0.0',
+              style: GoogleFonts.poppins(color: AppColors.grey),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Tu compañero de fitness completo',
+              style: GoogleFonts.poppins(color: AppColors.white),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cerrar', style: TextStyle(color: AppColors.pastelBlue)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _rateApp() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('¡Gracias por tu feedback!'),
+        backgroundColor: AppColors.pastelOrange,
+      ),
+    );
+  }
+
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBlack,
+        title: Text(
+          'Cerrar Sesión',
+          style: GoogleFonts.poppins(color: AppColors.white),
+        ),
+        content: Text(
+          '¿Estás seguro de que quieres cerrar sesión?',
+          style: GoogleFonts.poppins(color: AppColors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar', style: TextStyle(color: AppColors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              print("Sesión cerrada");
+            },
+            child: Text('Cerrar Sesión', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

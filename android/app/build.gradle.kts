@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.untitled2"
     // MODIFICA ESTAS LÍNEAS:
-    compileSdk = 34 // Cambia 'flutter.compileSdkVersion' a un número fijo, por ejemplo, 34
+    compileSdk = 35 // Cambia 'flutter.compileSdkVersion' a un número fijo, por ejemplo, 35
     ndkVersion = "27.0.12077973"
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -26,7 +26,7 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         // MODIFICA ESTA LÍNEA TAMBIÉN:
-        targetSdk = 34 // Cambia 'flutter.targetSdkVersion' a un número fijo, por ejemplo, 34
+        targetSdk = 35 // Cambia 'flutter.targetSdkVersion' a un número fijo, por ejemplo, 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

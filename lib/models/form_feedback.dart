@@ -284,3 +284,49 @@ extension ExerciseTypeExtension on ExerciseType {
     }
   }
 }
+
+class PostWorkoutAnalysis {
+  final String aiAnalysis;
+  final List<String> strengthsIdentified;
+  final List<String> weaknessesIdentified;
+  final String nextSessionFocus;
+  final DateTime timestamp;
+  final Map<String, dynamic> sessionStats;
+
+  PostWorkoutAnalysis({
+    required this.aiAnalysis,
+    required this.strengthsIdentified,
+    required this.weaknessesIdentified,
+    required this.nextSessionFocus,
+    DateTime? timestamp,
+    Map<String, dynamic>? sessionStats,
+  }) : timestamp = timestamp ?? DateTime.now(),
+       sessionStats = sessionStats ?? {};
+
+  Map<String, dynamic> toMap() {
+    return {
+      'aiAnalysis': aiAnalysis,
+      'strengthsIdentified': strengthsIdentified,
+      'weaknessesIdentified': weaknessesIdentified,
+      'nextSessionFocus': nextSessionFocus,
+      'timestamp': timestamp.toIso8601String(),
+      'sessionStats': sessionStats,
+    };
+  }
+
+  factory PostWorkoutAnalysis.fromMap(Map<String, dynamic> map) {
+    return PostWorkoutAnalysis(
+      aiAnalysis: map['aiAnalysis'] ?? '',
+      strengthsIdentified: List<String>.from(map['strengthsIdentified'] ?? []),
+      weaknessesIdentified: List<String>.from(map['weaknessesIdentified'] ?? []),
+      nextSessionFocus: map['nextSessionFocus'] ?? '',
+      timestamp: DateTime.parse(map['timestamp']),
+      sessionStats: Map<String, dynamic>.from(map['sessionStats'] ?? {}),
+    );
+  }
+
+  @override
+  String toString() {
+    return 'PostWorkoutAnalysis(aiAnalysis: $aiAnalysis, strengths: ${strengthsIdentified.length}, weaknesses: ${weaknessesIdentified.length})';
+  }
+}

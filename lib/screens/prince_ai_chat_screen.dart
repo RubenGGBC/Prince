@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:markdown_widget/markdown_widget.dart';
 import '../utils/app_colors.dart';
 import '../services/gemini_service.dart';
-import '../services/ai_form_coach.dart';
-import '../services/message_counter_service.dart';
+import '../services/contador_mensajes_service.dart';
+import 'dart:async';
 import '../models/chat_message.dart';
 import '../domain/user.dart';
 import '../models/form_feedback.dart';
@@ -32,8 +32,7 @@ class _PrinceAIChatScreenState extends State<PrinceAIChatScreen>
     with TickerProviderStateMixin {
 
   final GeminiService _geminiService = GeminiService();
-  final AIFormCoach _aiCoach = AIFormCoach(); // 🆕 Para análisis contextual
-  final MessageCounterService _counterService = MessageCounterService();
+  final ContadorMensajesService _counterService = ContadorMensajesService();
 
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();

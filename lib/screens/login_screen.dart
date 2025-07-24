@@ -4,7 +4,7 @@ import '../utils/app_colors.dart';
 import '../screens/home_screen.dart';
 import '../screens/home_tab.dart'; // ✅ IMPORTAR HomeTab
 import '../domain/user.dart';
-import '../database/DatabaseHelper.dart';
+import '../database/database_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   @override

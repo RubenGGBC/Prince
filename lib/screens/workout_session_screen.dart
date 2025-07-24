@@ -1,21 +1,15 @@
-// lib/screens/workout_session_screen.dart - CON IA HÍBRIDA
+// lib/screens/workout_session_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
-import 'dart:math' as math;
 import '../utils/app_colors.dart';
 import '../domain/exercise.dart';
 import '../domain/rutina.dart';
 import '../domain/user.dart';
-import '../database/DatabaseHelper.dart';
-// IMPORTS PARA ML KIT + IA
-import '../services/form_analysis_camera.dart';
-import '../services/ai_from_coach.dart';
-import '../models/form_feedback.dart';
-import '../models/form_score.dart';
+import '../database/database_helper.dart';
 
 class WorkoutSessionScreen extends StatefulWidget {
-  final User? user; // 🆕 Usuario para personalización IA
+  final User? user;
 
   const WorkoutSessionScreen({Key? key, this.user}) : super(key: key);
 
@@ -61,111 +55,14 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
   bool _isLoading = true;
   WorkoutPhase _currentPhase = WorkoutPhase.selectRoutine;
 
-  // 🆕 ========== SISTEMA IA HÍBRIDO ==========
-
-  // 📹 Controlador de análisis con IA
-  late FormAnalysisCamera _formAnalysisCamera;
-  bool _isCameraReady = false;
-  bool _isAnalyzingForm = false;
-
-  // 🤖 Datos de IA en tiempo real
-  FormScore? _currentFormScore;
-  RealTimeCoaching? _currentCoaching; // 🆕 Coaching en tiempo real
-  FormFeedback? _lastSetFeedback;
-  PostWorkoutAnalysis? _lastPostAnalysis; // 🆕 Análisis post-entrenamiento
-
-  // 🎯 Animaciones IA
-  late AnimationController _aiCoachingController;
-  late Animation<double> _aiCoachingAnimation;
-
-  // 📈 Estadísticas de la sesión
-  List<FormFeedback> _sessionFeedbacks = [];
-  List<PostWorkoutAnalysis> _sessionAnalyses = []; // 🆕 Análisis de IA
-
-  // 🎙️ Coaching de voz
-  bool _voiceCoachingEnabled = true;
-  Timer? _voiceCoachingTimer;
 
   @override
   void initState() {
     super.initState();
     _setupAnimations();
     _loadRoutines();
-    _initializeAISystem(); // 🆕 Inicializar sistema IA
   }
 
-  /// 🤖 INICIALIZAR SISTEMA IA HÍBRIDO
-  Future<void> _initializeAISystem() async {
-    try {
-      print('🤖 Inicializando sistema IA híbrido...');
-
-      _formAnalysisCamera = FormAnalysisCamera();
-
-      // 🆕 CONFIGURAR CALLBACKS IA MEJORADOS
-      _formAnalysisCamera.onFormScoreUpdate = (FormScore score) {
-        if (mounted) {
-          setState(() {
-            _currentFormScore = score;
-          });
-          _updateTechniqueIndicator(score.score);
-        }
-      };
-
-      // 🆕 Coaching en tiempo real
-      _formAnalysisCamera.onRealTimeCoaching = (RealTimeCoaching coaching) {
-        if (mounted) {
-          setState(() {
-            _currentCoaching = coaching;
-          });
-          _triggerCoachingAnimation();
-
-          // Coaching de voz si está habilitado
-          if (_voiceCoachingEnabled && coaching.isPositive) {
-            _speakCoaching(coaching.message);
-          }
-        }
-      };
-
-      _formAnalysisCamera.onError = (String error) {
-        if (mounted) {
-          _showError('Error de cámara: $error');
-        }
-      };
-
-      _formAnalysisCamera.onSetComplete = (FormFeedback feedback) {
-        if (mounted) {
-          setState(() {
-            _lastSetFeedback = feedback;
-            _sessionFeedbacks.add(feedback);
-          });
-        }
-      };
-
-      // 🆕 Análisis post-entrenamiento con IA
-      _formAnalysisCamera.onPostWorkoutAnalysis = (PostWorkoutAnalysis analysis) {
-        if (mounted) {
-          setState(() {
-            _lastPostAnalysis = analysis;
-            _sessionAnalyses.add(analysis);
-          });
-          _showPostWorkoutAnalysis(analysis);
-        }
-      };
-
-      // Inicializar cámara
-      final success = await _formAnalysisCamera.initialize();
-      if (success && mounted) {
-        setState(() {
-          _isCameraReady = true;
-        });
-        print('✅ Sistema IA híbrido inicializado correctamente');
-      }
-
-    } catch (e) {
-      print('❌ Error inicializando sistema IA: $e');
-      _showError('Error inicializando sistema IA');
-    }
-  }
 
   void _setupAnimations() {
     // Animaciones existentes
@@ -185,38 +82,8 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
       CurvedAnimation(parent: _waveController, curve: Curves.easeInOut),
     );
 
-    // 🆕 Animación para coaching IA
-    _aiCoachingController = AnimationController(
-      duration: Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _aiCoachingAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _aiCoachingController, curve: Curves.elasticOut),
-    );
   }
 
-  /// 🆕 TRIGGER ANIMACIÓN DE COACHING
-  void _triggerCoachingAnimation() {
-    _aiCoachingController.forward().then((_) {
-      Timer(Duration(seconds: 2), () {
-        if (mounted) _aiCoachingController.reverse();
-      });
-    });
-  }
-
-  /// 🎙️ HABLAR COACHING (Text-to-Speech simulado)
-  void _speakCoaching(String message) {
-    // Implementar TTS aquí si es necesario
-    print('🎙️ TTS: $message');
-  }
-
-  void _updateTechniqueIndicator(double score) {
-    if (score >= 7.0) {
-      _aiCoachingController.forward();
-    } else {
-      _aiCoachingController.reverse();
-    }
-  }
 
   // MÉTODOS DE CARGA DE RUTINAS (sin cambios)
   Future<void> _loadRoutines() async {
@@ -255,56 +122,16 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         _repsController.text = _currentExercise!.repeticiones.toString();
       });
 
-      // 🆕 CONFIGURAR CÁMARA CON INFORMACIÓN DEL USUARIO
-      _setupCameraForCurrentExercise();
     }
   }
 
-  /// 🆕 CONFIGURAR CÁMARA CON IA PARA EJERCICIO ACTUAL
-  Future<void> _setupCameraForCurrentExercise() async {
-    print('🎥 Configurando cámara con IA para: ${_currentExercise?.nombre}');
 
-    if (!_isCameraReady || _currentExercise == null) {
-      print('❌ Cámara no lista o ejercicio null');
-      return;
-    }
-
-    try {
-      // 🆕 Pasar usuario para personalización IA
-      final success = await _formAnalysisCamera.setupCameraForExercise(
-        _currentExercise!,
-        user: widget.user,
-      );
-
-      if (success) {
-        setState(() {
-          // Forzar rebuild
-        });
-
-        final instructions = _formAnalysisCamera.getCameraPositionInstructions();
-        _showInfo(instructions);
-
-        print('✅ Cámara con IA configurada correctamente');
-      } else {
-        _showError('Error configurando cámara IA');
-      }
-
-    } catch (e) {
-      print('❌ Error configurando cámara IA: $e');
-      _showError('Error configurando cámara IA: $e');
-    }
-  }
-
-  // ⏱️ CONTROL DEL CRONÓMETRO CON IA
+  // ⏱️ CONTROL DEL CRONÓMETRO
   void _startSet() {
     setState(() {
       _currentPhase = WorkoutPhase.exerciseActive;
       _isRunning = true;
       _seconds = 0;
-      _currentFormScore = null;
-      _currentCoaching = null; // 🆕 Reset coaching
-      _lastSetFeedback = null;
-      _lastPostAnalysis = null; // 🆕 Reset análisis
     });
 
     _pulseController.repeat(reverse: true);
@@ -315,165 +142,24 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         _seconds++;
       });
     });
-
-    // Iniciar análisis con IA
-    _startAIAnalysis();
   }
 
-  /// 🆕 INICIAR ANÁLISIS CON IA
-  Future<void> _startAIAnalysis() async {
-    if (!_isCameraReady) {
-      print('⚠️ Cámara no lista para análisis IA');
-      return;
-    }
-
-    try {
-      print('🤖 Iniciando análisis con IA...');
-
-      setState(() {
-        _isAnalyzingForm = true;
-      });
-
-      await _formAnalysisCamera.startAnalysis();
-
-      // Iniciar coaching de voz periódico
-      if (_voiceCoachingEnabled) {
-        _voiceCoachingTimer = Timer.periodic(Duration(seconds: 5), (timer) {
-          if (_currentFormScore != null) {
-            final voiceMessage = _formAnalysisCamera.getVoiceCoaching(_currentFormScore!);
-            if (voiceMessage.isNotEmpty) {
-              _speakCoaching(voiceMessage);
-            }
-          }
-        });
-      }
-
-      print('✅ Análisis IA iniciado');
-
-    } catch (e) {
-      print('❌ Error iniciando análisis IA: $e');
-      _showError('Error iniciando análisis IA');
-    }
-  }
 
   void _finishSet() async {
     _timer?.cancel();
-    _voiceCoachingTimer?.cancel(); // 🆕 Parar coaching de voz
     _pulseController.stop();
     _waveController.stop();
 
-    // Detener análisis y obtener feedback con IA
-    FormFeedback? feedback;
-    if (_isAnalyzingForm) {
-      try {
-        print('🛑 Deteniendo análisis IA...');
-        feedback = await _formAnalysisCamera.stopAnalysis();
-        print('📊 Feedback IA obtenido: ${feedback.averageScore.toStringAsFixed(1)}/10');
-      } catch (e) {
-        print('❌ Error obteniendo feedback IA: $e');
-      }
-    }
-
     setState(() {
       _isRunning = false;
-      _isAnalyzingForm = false;
       _currentPhase = WorkoutPhase.resting;
       _isResting = true;
       _restSeconds = 180;
-      if (feedback != null) {
-        _lastSetFeedback = feedback;
-        _sessionFeedbacks.add(feedback);
-      }
     });
 
     _startRestTimer();
   }
 
-  /// 🆕 MOSTRAR ANÁLISIS POST-ENTRENAMIENTO
-  void _showPostWorkoutAnalysis(PostWorkoutAnalysis analysis) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBlack,
-        title: Row(
-          children: [
-            Icon(Icons.smart_toy, color: AppColors.pastelBlue),
-            SizedBox(width: 8),
-            Text(
-              'Análisis de PrinceIA',
-              style: GoogleFonts.poppins(color: AppColors.white),
-            ),
-          ],
-        ),
-        content: Container(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                analysis.aiAnalysis,
-                style: GoogleFonts.poppins(color: AppColors.white, fontSize: 14),
-              ),
-              SizedBox(height: 16),
-
-              if (analysis.strengthsIdentified.isNotEmpty) ...[
-                Text(
-                  '💪 Fortalezas:',
-                  style: GoogleFonts.poppins(color: AppColors.pastelGreen, fontWeight: FontWeight.bold),
-                ),
-                ...analysis.strengthsIdentified.map((strength) => Padding(
-                  padding: EdgeInsets.only(left: 8, top: 4),
-                  child: Text('• $strength', style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 12)),
-                )),
-                SizedBox(height: 12),
-              ],
-
-              if (analysis.weaknessesIdentified.isNotEmpty) ...[
-                Text(
-                  '🎯 A mejorar:',
-                  style: GoogleFonts.poppins(color: AppColors.pastelOrange, fontWeight: FontWeight.bold),
-                ),
-                ...analysis.weaknessesIdentified.map((weakness) => Padding(
-                  padding: EdgeInsets.only(left: 8, top: 4),
-                  child: Text('• $weakness', style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 12)),
-                )),
-                SizedBox(height: 12),
-              ],
-
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceBlack,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '🚀 Próxima sesión:',
-                      style: GoogleFonts.poppins(color: AppColors.pastelBlue, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      analysis.nextSessionFocus,
-                      style: GoogleFonts.poppins(color: AppColors.white, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Continuar', style: TextStyle(color: AppColors.pastelBlue)),
-          ),
-        ],
-      ),
-    );
-  }
 
   // MÉTODOS DE UI EXISTENTES CON MEJORAS IA
 
@@ -489,7 +175,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
               CircularProgressIndicator(),
               SizedBox(height: 16),
               Text(
-                '🤖 Preparando PrinceIA...',
+                'Cargando...',
                 style: GoogleFonts.poppins(color: AppColors.white),
               ),
             ],
@@ -513,16 +199,15 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
       case WorkoutPhase.exerciseReady:
         return _buildExerciseReady();
       case WorkoutPhase.exerciseActive:
-        return _buildExerciseActiveWithAI(); // 🆕 Con IA
+        return _buildExerciseActive();
       case WorkoutPhase.resting:
-        return _buildRestingStateWithAI(); // 🆕 Con IA
+        return _buildRestingState();
       case WorkoutPhase.completed:
-        return _buildWorkoutCompletedWithAI(); // 🆕 Con IA
+        return _buildWorkoutCompleted();
     }
   }
 
-  /// 🆕 EJERCICIO ACTIVO CON IA
-  Widget _buildExerciseActiveWithAI() {
+  Widget _buildExerciseActive() {
     return Padding(
       padding: EdgeInsets.all(20),
       child: Column(
@@ -530,61 +215,14 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
           _buildWorkoutHeader(),
           SizedBox(height: 20),
 
-          // Vista principal con cámara IA
+          // Vista principal
           Expanded(
             flex: 3,
-            child: Row(
+            child: Column(
               children: [
-                // Panel izquierdo: Cronómetro y stats
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    children: [
-                      _buildMainTimer(),
-                      SizedBox(height: 20),
-                      _buildCurrentSetInfo(),
-                      SizedBox(height: 20),
-                      _buildAIStats(), // 🆕 Estadísticas IA
-                    ],
-                  ),
-                ),
-
-                SizedBox(width: 20),
-
-                // Panel derecho: Cámara con análisis IA
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    children: [
-                      // Vista de cámara con overlay IA
-                      Expanded(
-                        flex: 3,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _currentFormScore != null
-                                  ? _currentFormScore!.color
-                                  : AppColors.grey,
-                              width: 3,
-                            ),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(9),
-                            child: _isCameraReady
-                                ? _formAnalysisCamera.buildCameraPreview(showAIOverlay: true) // 🆕 Con overlay IA
-                                : _buildCameraPlaceholder(),
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(height: 12),
-
-                      // 🆕 Panel de coaching IA en tiempo real
-                      _buildAICoachingPanel(),
-                    ],
-                  ),
-                ),
+                _buildMainTimer(),
+                SizedBox(height: 20),
+                _buildCurrentSetInfo(),
               ],
             ),
           ),
@@ -592,178 +230,22 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
           SizedBox(height: 20),
 
           // Controles
-          Row(
-            children: [
-              // Toggle coaching de voz
-              _buildVoiceCoachingToggle(),
-              Spacer(),
-              // Botón terminar set
-              Expanded(flex: 2, child: _buildFinishSetButton()),
-            ],
-          ),
+          _buildFinishSetButton(),
         ],
       ),
     );
   }
 
-  /// 🆕 PANEL DE COACHING IA EN TIEMPO REAL
-  Widget _buildAICoachingPanel() {
-    return AnimatedBuilder(
-      animation: _aiCoachingAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: 1.0 + (_aiCoachingAnimation.value * 0.05),
-          child: Container(
-            height: 100,
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.cardBlack,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _currentCoaching?.isPositive == true
-                    ? AppColors.pastelGreen
-                    : AppColors.pastelOrange,
-                width: _aiCoachingAnimation.value * 2,
-              ),
-            ),
-            child: _currentCoaching != null
-                ? Column(
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.smart_toy, color: AppColors.pastelBlue, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'PrinceIA',
-                      style: GoogleFonts.poppins(
-                        color: AppColors.pastelBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Spacer(),
-                    Text(
-                      _currentCoaching!.score.toStringAsFixed(1),
-                      style: GoogleFonts.poppins(
-                        color: _currentCoaching!.isPositive ? AppColors.pastelGreen : AppColors.pastelOrange,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Text(
-                  _currentCoaching!.message,
-                  style: GoogleFonts.poppins(color: AppColors.white, fontSize: 12),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            )
-                : Center(
-              child: Text(
-                _isAnalyzingForm ? '🤖 PrinceIA analizando...' : '🎯 Presiona iniciar',
-                style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 14),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 
-  /// 🆕 ESTADÍSTICAS IA
-  Widget _buildAIStats() {
-    final stats = _formAnalysisCamera.getCurrentStats();
 
-    return Container(
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.cardBlack,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(
-            '🤖 Stats IA',
-            style: GoogleFonts.poppins(
-              color: AppColors.pastelBlue,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Reps:', style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 12)),
-              Text('${stats['currentReps']}', style: GoogleFonts.poppins(color: AppColors.white, fontSize: 12)),
-            ],
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Promedio:', style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 12)),
-              Text('${(stats['averageScore'] as double).toStringAsFixed(1)}', style: GoogleFonts.poppins(color: AppColors.white, fontSize: 12)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
-  /// 🆕 TOGGLE COACHING DE VOZ
-  Widget _buildVoiceCoachingToggle() {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _voiceCoachingEnabled = !_voiceCoachingEnabled;
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: _voiceCoachingEnabled ? AppColors.pastelBlue : AppColors.surfaceBlack,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _voiceCoachingEnabled ? Icons.volume_up : Icons.volume_off,
-              color: AppColors.white,
-              size: 16,
-            ),
-            SizedBox(width: 4),
-            Text(
-              'Voz',
-              style: GoogleFonts.poppins(color: AppColors.white, fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 🆕 ESTADO DE DESCANSO CON ANÁLISIS IA
-  Widget _buildRestingStateWithAI() {
+  Widget _buildRestingState() {
     return Padding(
       padding: EdgeInsets.all(20),
       child: Column(
         children: [
           _buildWorkoutHeader(),
           SizedBox(height: 20),
-
-          // Análisis IA del set anterior
-          if (_lastPostAnalysis != null) ...[
-            _buildAIAnalysisCard(_lastPostAnalysis!),
-            SizedBox(height: 20),
-          ] else if (_lastSetFeedback != null) ...[
-            _buildSetFeedbackCard(),
-            SizedBox(height: 20),
-          ],
 
           // Cronómetro de descanso
           _buildRestTimer(),
@@ -782,77 +264,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     );
   }
 
-  /// 🆕 TARJETA DE ANÁLISIS IA
-  Widget _buildAIAnalysisCard(PostWorkoutAnalysis analysis) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.cardBlack,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.pastelBlue, width: 2),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.smart_toy, color: AppColors.pastelBlue),
-              SizedBox(width: 8),
-              Text(
-                'Análisis de PrinceIA',
-                style: GoogleFonts.poppins(
-                  color: AppColors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-
-          Text(
-            analysis.aiAnalysis,
-            style: GoogleFonts.poppins(color: AppColors.white, fontSize: 14),
-          ),
-
-          if (analysis.strengthsIdentified.isNotEmpty) ...[
-            SizedBox(height: 16),
-            Text(
-              '💪 Fortalezas identificadas:',
-              style: GoogleFonts.poppins(color: AppColors.pastelGreen, fontWeight: FontWeight.bold),
-            ),
-            ...analysis.strengthsIdentified.take(2).map((strength) => Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Text('• $strength', style: GoogleFonts.poppins(color: AppColors.grey, fontSize: 12)),
-            )),
-          ],
-
-          SizedBox(height: 16),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceBlack,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '🎯 Próxima sesión:',
-                  style: GoogleFonts.poppins(color: AppColors.pastelBlue, fontWeight: FontWeight.bold, fontSize: 12),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  analysis.nextSessionFocus,
-                  style: GoogleFonts.poppins(color: AppColors.white, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // RESTO DE MÉTODOS UI (reutilizar los existentes con pequeñas mejoras)
 
@@ -879,10 +290,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
                 color: AppColors.grey,
               ),
             ),
-            if (_isCameraReady) ...[
-              SizedBox(width: 8),
-              Icon(Icons.smart_toy, color: AppColors.pastelBlue, size: 16),
-            ],
           ],
         ),
       ],
@@ -892,27 +299,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
   // ... [incluir todos los métodos UI restantes del código anterior]
   // [Para brevedad, incluyo solo los métodos clave, pero debes mantener todos los existentes]
 
-  Widget _buildCameraPlaceholder() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceBlack,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.smart_toy, color: AppColors.pastelBlue, size: 48),
-            SizedBox(height: 16),
-            Text(
-              _isCameraReady ? '🤖 Preparando análisis IA...' : '🎥 Inicializando cámara...',
-              style: GoogleFonts.poppins(color: AppColors.grey),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ... [resto de métodos UI existentes]
 
@@ -932,22 +318,550 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     );
   }
 
+  void _startRestTimer() {
+    _restTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _restSeconds--;
+        if (_restSeconds <= 0) {
+          timer.cancel();
+          _isResting = false;
+        }
+      });
+    });
+  }
+
+  Widget _buildRoutineSelection() {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.list_alt_rounded,
+                  color: AppColors.white,
+                  size: 28,
+                ),
+              ),
+              SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Iniciar Sesión',
+                    style: GoogleFonts.poppins(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  Text(
+                    'Selecciona una rutina para empezar',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: AppColors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(height: 30),
+          Expanded(
+            child: _availableRoutines.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off_rounded, size: 80, color: AppColors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'No hay rutinas disponibles',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.white,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Crea una rutina primero',
+                          style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _availableRoutines.length,
+                    itemBuilder: (context, index) {
+                      final routine = _availableRoutines[index];
+                      final color = AppColors.pastelBlue; // Or a color based on category
+                      return Card(
+                        margin: EdgeInsets.only(bottom: 16),
+                        color: AppColors.cardBlack,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(color: color.withOpacity(0.2), width: 1),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => _selectRoutine(routine),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: color.withOpacity(0.1),
+                                  radius: 25,
+                                  child: Icon(
+                                    Icons.fitness_center_rounded, // Replace with category icon if available
+                                    color: color,
+                                    size: 24,
+                                  ),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        routine.nombre,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.white,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        '${routine.ejercicioIds.length} ejercicios • ${routine.duracionEstimada} min',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: AppColors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.arrow_forward_ios_rounded, color: AppColors.grey),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExerciseReady() {
+    final color = _currentExercise != null ? _getColorByMuscleGroup(_currentExercise!.grupoMuscular) : AppColors.pastelBlue;
+
+    return Padding(
+      padding: EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildWorkoutHeader(),
+          Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.cardBlack,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: color.withOpacity(0.3)),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Prepárate',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.white,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Ajusta el peso y las repeticiones para este set.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppColors.grey,
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSetInput(
+                        controller: _weightController,
+                        label: 'Peso (kg)',
+                        icon: Icons.fitness_center_rounded,
+                        color: AppColors.pastelGreen,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: _buildSetInput(
+                        controller: _repsController,
+                        label: 'Reps',
+                        icon: Icons.repeat_rounded,
+                        color: AppColors.pastelOrange,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _startSet,
+              icon: Icon(Icons.play_arrow_rounded, color: AppColors.white),
+              label: Text(
+                'Iniciar Set',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: AppColors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkoutCompleted() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.check_circle,
+            size: 100,
+            color: AppColors.pastelGreen,
+          ),
+          SizedBox(height: 20),
+          Text(
+            '¡Entrenamiento Completado!',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.white,
+            ),
+          ),
+          SizedBox(height: 40),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Finalizar',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.pastelBlue,
+              padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainTimer() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardBlack,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Tiempo',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: AppColors.grey,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            '${(_seconds ~/ 60).toString().padLeft(2, '0')}:${(_seconds % 60).toString().padLeft(2, '0')}',
+            style: GoogleFonts.poppins(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              color: AppColors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentSetInfo() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBlack,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Set Actual',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: AppColors.grey,
+            ),
+          ),
+          SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: [
+                  Text(
+                    _weightController.text,
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  Text(
+                    'kg',
+                    style: GoogleFonts.poppins(color: AppColors.grey),
+                  ),
+                ],
+              ),
+              Column(
+                children: [
+                  Text(
+                    _repsController.text,
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  Text(
+                    'reps',
+                    style: GoogleFonts.poppins(color: AppColors.grey),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFinishSetButton() {
+    return ElevatedButton(
+      onPressed: _finishSet,
+      child: Text(
+        'Terminar Set',
+        style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.pastelOrange,
+        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+      ),
+    );
+  }
+
+  Widget _buildRestTimer() {
+    return Container(
+      padding: EdgeInsets.all(30),
+      decoration: BoxDecoration(
+        color: AppColors.cardBlack,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Descanso',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              color: AppColors.grey,
+            ),
+          ),
+          SizedBox(height: 16),
+          Text(
+            '${(_restSeconds ~/ 60).toString().padLeft(2, '0')}:${(_restSeconds % 60).toString().padLeft(2, '0')}',
+            style: GoogleFonts.poppins(
+              fontSize: 56,
+              fontWeight: FontWeight.bold,
+              color: AppColors.pastelBlue,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNextSetInfo() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBlack,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Próximo Set',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.white,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Set ${_currentSet + 1} de ${_currentExercise?.series ?? 0}',
+            style: GoogleFonts.poppins(color: AppColors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRestActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {
+              _restTimer?.cancel();
+              setState(() {
+                _isResting = false;
+                _currentSet++;
+                if (_currentSet <= (_currentExercise?.series ?? 0)) {
+                  _currentPhase = WorkoutPhase.exerciseReady;
+                } else {
+                  _currentExerciseIndex++;
+                  if (_currentExerciseIndex < _routineExercises.length) {
+                    _currentSet = 1;
+                    _currentPhase = WorkoutPhase.exerciseReady;
+                    _prepareExercise();
+                  } else {
+                    _currentPhase = WorkoutPhase.completed;
+                  }
+                }
+              });
+            },
+            child: Text(
+              'Continuar',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.pastelGreen,
+              padding: EdgeInsets.symmetric(vertical: 15),
+            ),
+          ),
+        ),
+        SizedBox(width: 16),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {
+              _restTimer?.cancel();
+              setState(() {
+                _currentPhase = WorkoutPhase.completed;
+              });
+            },
+            child: Text(
+              'Terminar',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.pastelOrange,
+              padding: EdgeInsets.symmetric(vertical: 15),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
     _restTimer?.cancel();
-    _voiceCoachingTimer?.cancel(); // 🆕
     _pulseController.dispose();
     _waveController.dispose();
-    _aiCoachingController.dispose(); // 🆕
     _weightController.dispose();
     _repsController.dispose();
 
-    // Limpiar recursos IA
-    _formAnalysisCamera.dispose();
-
     super.dispose();
   }
+
+  Color _getColorByMuscleGroup(String grupo) {
+    switch (grupo) {
+      case 'Pecho': return AppColors.pastelPink;
+      case 'Espalda': return AppColors.pastelGreen;
+      case 'Piernas': return AppColors.pastelBlue;
+      case 'Hombros': return AppColors.pastelPurple;
+      case 'Brazos': return AppColors.pastelOrange;
+      default: return AppColors.grey;
+    }
+  }
+
+  Widget _buildSetInput({
+  required TextEditingController controller,
+  required String label,
+  required IconData icon,
+  required Color color,
+}) {
+  return TextField(
+    controller: controller,
+    textAlign: TextAlign.center,
+    keyboardType: TextInputType.number,
+    style: GoogleFonts.poppins(
+      color: AppColors.white,
+      fontSize: 28,
+      fontWeight: FontWeight.bold,
+    ),
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.poppins(
+        color: color,
+        fontWeight: FontWeight.w500,
+      ),
+      prefixIcon: Icon(icon, color: color),
+      filled: true,
+      fillColor: AppColors.surfaceBlack,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: color, width: 2),
+      ),
+    ),
+  );
+}
 
 // ... [incluir métodos restantes como _buildMainTimer, _buildSetFeedbackCard, etc.]
 }

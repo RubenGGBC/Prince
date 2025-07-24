@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
 import '../domain/user.dart';
-import '../database/DatabaseHelper.dart';
+import '../database/database_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override

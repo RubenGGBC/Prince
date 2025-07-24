@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
+import '../domain/user.dart';
 import 'home_tab.dart';
 import 'exercises_tab.dart';
 import 'nutrition_tab.dart';
@@ -8,6 +9,10 @@ import 'progress_tab.dart';
 import 'profile_tab.dart';
 
 class DashboardScreen extends StatefulWidget {
+  final User? user;
+
+  const DashboardScreen({Key? key, this.user}) : super(key: key);
+
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
 }
@@ -17,13 +22,26 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   late PageController _pageController;
   late AnimationController _animationController;
 
-  final List<Widget> _pages = [
-    HomeTab(),
-    ExercisesTab(),
-    NutritionTab(),
-    ProgressTab(),
-    ProfileTab(),
-  ];
+  List<Widget> get _pages {
+    final defaultUser = User(
+      email: 'guest@example.com',
+      password: '',
+      createdAt: DateTime.now(),
+      genre: 'Other',
+      name: 'Guest',
+      weight: 70.0,
+      height: 170.0,
+      age: 25,
+    );
+
+    return [
+      HomeTab(user: widget.user ?? defaultUser),
+      ExercisesTab(),
+      NutritionTab(),
+      ProgressTab(user: widget.user ?? defaultUser),
+      ProfileTab(),
+    ];
+  }
 
   final List<String> _titles = [
     'Inicio',

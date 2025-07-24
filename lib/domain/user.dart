@@ -1,6 +1,5 @@
 // ✅ Sin imports circulares - User no necesita conocer DatabaseHelper
 
-import 'dart:ffi';
 
 class User {
   final String email;
@@ -84,4 +83,11 @@ class User {
 
   @override
   int get hashCode => email.hashCode;
+
+  // Getter for compatibility (some code expects 'nombre')
+  String get nombre => name;
+
+  // Additional properties for AI chat functionality
+  String? get experienceLevel => 'Beginner'; // Default experience level
+  List<String>? get goals => ['Fitness general']; // Default goals
 }
