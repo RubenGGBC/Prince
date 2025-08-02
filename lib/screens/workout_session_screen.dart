@@ -1,4 +1,3 @@
-// lib/screens/workout_session_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
@@ -6,6 +5,9 @@ import '../utils/app_colors.dart';
 import '../domain/exercise.dart';
 import '../domain/rutina.dart';
 import '../domain/user.dart';
+import '../domain/training.dart';
+import '../domain/performed_exercise.dart';
+import '../domain/user_record.dart';
 import '../database/database_helper.dart';
 
 class WorkoutSessionScreen extends StatefulWidget {
@@ -35,6 +37,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
   Timer? _timer;
   int _seconds = 0;
   bool _isRunning = false;
+  DateTime? _workoutStartTime; // Para calcular tiempo total del entrenamiento
 
   // 😴 ESTADO DEL DESCANSO
   Timer? _restTimer;
@@ -55,6 +58,9 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
   bool _isLoading = true;
   WorkoutPhase _currentPhase = WorkoutPhase.selectRoutine;
 
+  // 📊 ALMACENAMIENTO DE RESULTADOS
+  List<Performed_exercise> _performedExercises = [];
+  Map<String, List<Map<String, dynamic>>> _exerciseResults = {}; // Almacena todos los sets de cada ejercicio
 
   @override
   void initState() {
@@ -63,9 +69,7 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     _loadRoutines();
   }
 
-
   void _setupAnimations() {
-    // Animaciones existentes
     _pulseController = AnimationController(
       duration: Duration(milliseconds: 1000),
       vsync: this,
@@ -81,11 +85,9 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     _waveAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _waveController, curve: Curves.easeInOut),
     );
-
   }
 
-
-  // MÉTODOS DE CARGA DE RUTINAS (sin cambios)
+  // MÉTODOS DE CARGA DE RUTINAS
   Future<void> _loadRoutines() async {
     try {
       final routines = await _dbHelper.getAllRutinas();
@@ -108,6 +110,14 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         _currentExerciseIndex = 0;
         _currentSet = 1;
         _currentPhase = WorkoutPhase.exerciseReady;
+        _workoutStartTime = DateTime.now(); // Iniciar cronómetro del entrenamiento
+
+        // Inicializar almacenamiento de resultados
+        _performedExercises = [];
+        _exerciseResults = {};
+        for (var exercise in exercises) {
+          _exerciseResults[exercise.id.toString()] = [];
+        }
       });
       _prepareExercise();
     } catch (e) {
@@ -121,10 +131,8 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         _weightController.text = _currentExercise!.peso.toString();
         _repsController.text = _currentExercise!.repeticiones.toString();
       });
-
     }
   }
-
 
   // ⏱️ CONTROL DEL CRONÓMETRO
   void _startSet() {
@@ -144,11 +152,13 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     });
   }
 
-
   void _finishSet() async {
     _timer?.cancel();
     _pulseController.stop();
     _waveController.stop();
+
+    // 📊 GUARDAR RESULTADOS DEL SET
+    await _saveSetResults();
 
     setState(() {
       _isRunning = false;
@@ -160,9 +170,222 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     _startRestTimer();
   }
 
+  // 📊 MÉTODO PARA GUARDAR RESULTADOS DE CADA SET
+  Future<void> _saveSetResults() async {
+    if (_currentExercise == null) return;
 
-  // MÉTODOS DE UI EXISTENTES CON MEJORAS IA
+    final setResult = {
+      'set': _currentSet,
+      'weight': double.tryParse(_weightController.text) ?? 0.0,
+      'reps': int.tryParse(_repsController.text) ?? 0,
+      'time': _seconds.toDouble(),
+      'date': DateTime.now(),
+    };
 
+    // Añadir el set a los resultados del ejercicio actual
+    _exerciseResults[_currentExercise!.id.toString()]?.add(setResult);
+
+    print('Set guardado: Ejercicio ${_currentExercise!.nombre}, Set $_currentSet, Peso: ${setResult['weight']}, Reps: ${setResult['reps']}, Tiempo: ${setResult['time']}s');
+  }
+
+  // 💾 MÉTODO PARA GUARDAR EL ENTRENAMIENTO COMPLETO
+  Future<void> _saveWorkout() async {
+    try {
+      // Validaciones más específicas
+      if (_selectedRoutine == null) {
+        _showError('Error: No se ha seleccionado ninguna rutina');
+        print('DEBUG: _selectedRoutine is null');
+        return;
+      }
+
+      if (widget.user == null) {
+        _showError('Error: Usuario no identificado');
+        print('DEBUG: widget.user is null');
+        return;
+      }
+
+      if (_routineExercises.isEmpty) {
+        _showError('Error: No hay ejercicios en la rutina');
+        print('DEBUG: _routineExercises is empty');
+        return;
+      }
+
+      if (_exerciseResults.isEmpty) {
+        _showError('Error: No se han registrado ejercicios realizados');
+        print('DEBUG: _exerciseResults is empty');
+        return;
+      }
+
+      print('DEBUG: Iniciando guardado del entrenamiento...');
+      print('DEBUG: Rutina seleccionada: ${_selectedRoutine!.nombre}');
+      print('DEBUG: Usuario: ${widget.user!.name ?? 'Sin nombre'}');
+      print('DEBUG: Ejercicios realizados: ${_exerciseResults.length}');
+
+      // Crear lista de ejercicios realizados
+      List<Performed_exercise> performedExercises = [];
+
+      for (var exercise in _routineExercises) {
+        final exerciseId = exercise.id.toString();
+        final sets = _exerciseResults[exerciseId] ?? [];
+
+        print('DEBUG: Procesando ejercicio ${exercise.nombre} con ${sets.length} sets');
+
+        if (sets.isNotEmpty) {
+          // Calcular totales para este ejercicio
+          final totalSets = sets.length;
+          final totalTime = sets.fold<double>(0.0, (sum, set) => sum + (set['time'] as double));
+          final avgWeight = sets.fold<double>(0.0, (sum, set) => sum + (set['weight'] as double)) / totalSets;
+          final totalReps = sets.fold<int>(0, (sum, set) => sum + (set['reps'] as int));
+
+          final performedExercise = Performed_exercise(
+            id: '${exercise.id}_${DateTime.now().millisecondsSinceEpoch}',
+            exerciseId: exercise.id,
+            time: totalTime,
+            series: totalSets,
+            reps: totalReps,
+            weight: avgWeight,
+            date: DateTime.now(),
+          );
+
+          performedExercises.add(performedExercise);
+          print('DEBUG: Ejercicio añadido - Sets: $totalSets, Tiempo: $totalTime, Peso promedio: $avgWeight');
+        }
+      }
+
+      if (performedExercises.isEmpty) {
+        _showError('Error: No se han completado ejercicios para guardar');
+        print('DEBUG: performedExercises is empty after processing');
+        return;
+      }
+
+      // Calcular tiempo total del entrenamiento
+      final totalWorkoutTime = _workoutStartTime != null
+          ? DateTime.now().difference(_workoutStartTime!).inSeconds.toDouble()
+          : 0.0;
+
+      print('DEBUG: Tiempo total del entrenamiento: $totalWorkoutTime segundos');
+
+      // Crear el objeto Training
+      final training = Training(
+        rutinaId: _selectedRoutine!.id,
+        performedExercises: performedExercises,
+        date: DateTime.now(),
+        totalTime: totalWorkoutTime,
+      );
+
+      print('DEBUG: Objeto Training creado, guardando en base de datos...');
+
+      // Guardar el entrenamiento en la base de datos
+      await _dbHelper.insertTraining(training);
+
+      print('DEBUG: Training guardado exitosamente');
+
+      // Actualizar el registro del usuario
+      await _updateUserRecord(training);
+
+      print('DEBUG: Registro de usuario actualizado');
+
+      _showInfo('¡Entrenamiento guardado exitosamente!');
+
+    } catch (e, stackTrace) {
+      _showError('Error guardando entrenamiento: $e');
+      print('ERROR DETALLADO: $e');
+      print('STACK TRACE: $stackTrace');
+    }
+  }
+
+  // 📈 MÉTODO PARA ACTUALIZAR EL REGISTRO DEL USUARIO
+  Future<void> _updateUserRecord(Training training) async {
+    try {
+      if (widget.user == null) {
+        print('DEBUG: No se puede actualizar registro - usuario null');
+        return;
+      }
+
+      if (widget.user!.id == null) {
+        print('DEBUG: No se puede actualizar registro - user.id null');
+        return;
+      }
+
+      print('DEBUG: Actualizando registro para usuario ID: ${widget.user!.id}');
+
+      // Obtener el registro actual del usuario
+      User_record? currentRecord = await _dbHelper.getUserRecord(widget.user!.id!);
+
+      print('DEBUG: Registro actual obtenido: ${currentRecord != null ? 'existe' : 'no existe'}');
+
+      // Si no existe registro, crear uno nuevo
+      currentRecord ??= User_record(
+        record: [],
+        recordDates: [],
+        totalTrainingDays: 0,
+        consecutiveTrainingDays: 0,
+      );
+
+      // Actualizar el registro
+      final updatedRecord = currentRecord.copyWith(
+        record: [...currentRecord.record, training.rutinaId ?? 0],
+        recordDates: [...currentRecord.recordDates, training.date],
+        totalTrainingDays: currentRecord.totalTrainingDays + 1,
+        consecutiveTrainingDays: _calculateConsecutiveDays(
+            [...currentRecord.recordDates, training.date]
+        ),
+      );
+
+      print('DEBUG: Registro actualizado - Días totales: ${updatedRecord.totalTrainingDays}');
+
+      // Guardar el registro actualizado
+      await _dbHelper.updateUserRecord(widget.user!.id!, updatedRecord);
+
+      print('DEBUG: Registro de usuario guardado exitosamente');
+
+    } catch (e, stackTrace) {
+      print('ERROR actualizando registro del usuario: $e');
+      print('STACK TRACE: $stackTrace');
+      // No mostramos error al usuario para no interrumpir el flujo principal
+    }
+  }
+
+  // 📅 MÉTODO PARA CALCULAR DÍAS CONSECUTIVOS
+  int _calculateConsecutiveDays(List<DateTime> dates) {
+    if (dates.isEmpty) return 0;
+
+    // Ordenar fechas y obtener solo los días (sin horas)
+    final sortedDates = dates
+        .map((date) => DateTime(date.year, date.month, date.day))
+        .toSet()
+        .toList()
+      ..sort();
+
+    int consecutive = 1;
+    int maxConsecutive = 1;
+
+    for (int i = 1; i < sortedDates.length; i++) {
+      final diff = sortedDates[i].difference(sortedDates[i - 1]).inDays;
+      if (diff == 1) {
+        consecutive++;
+        maxConsecutive = consecutive > maxConsecutive ? consecutive : maxConsecutive;
+      } else {
+        consecutive = 1;
+      }
+    }
+
+    return maxConsecutive;
+  }
+
+  void _startRestTimer() {
+    _restTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _restSeconds--;
+        if (_restSeconds <= 0) {
+          timer.cancel();
+          _isResting = false;
+        }
+      });
+    });
+  }
+
+  // MÉTODOS DE UI EXISTENTES
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -214,8 +437,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         children: [
           _buildWorkoutHeader(),
           SizedBox(height: 20),
-
-          // Vista principal
           Expanded(
             flex: 3,
             child: Column(
@@ -226,18 +447,12 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
               ],
             ),
           ),
-
           SizedBox(height: 20),
-
-          // Controles
           _buildFinishSetButton(),
         ],
       ),
     );
   }
-
-
-
 
   Widget _buildRestingState() {
     return Padding(
@@ -246,26 +461,15 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         children: [
           _buildWorkoutHeader(),
           SizedBox(height: 20),
-
-          // Cronómetro de descanso
           _buildRestTimer(),
-
           SizedBox(height: 20),
-
-          // Información del próximo set
           _buildNextSetInfo(),
-
           Spacer(),
-
-          // Acciones de descanso
           _buildRestActions(),
         ],
       ),
     );
   }
-
-
-  // RESTO DE MÉTODOS UI (reutilizar los existentes con pequeñas mejoras)
 
   Widget _buildWorkoutHeader() {
     return Column(
@@ -294,40 +498,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         ),
       ],
     );
-  }
-
-  // ... [incluir todos los métodos UI restantes del código anterior]
-  // [Para brevedad, incluyo solo los métodos clave, pero debes mantener todos los existentes]
-
-
-  // ... [resto de métodos UI existentes]
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
-  void _showInfo(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.pastelBlue,
-        duration: Duration(seconds: 3),
-      ),
-    );
-  }
-
-  void _startRestTimer() {
-    _restTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        _restSeconds--;
-        if (_restSeconds <= 0) {
-          timer.cancel();
-          _isResting = false;
-        }
-      });
-    });
   }
 
   Widget _buildRoutineSelection() {
@@ -377,87 +547,87 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
           Expanded(
             child: _availableRoutines.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search_off_rounded, size: 80, color: AppColors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'No hay rutinas disponibles',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.white,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Crea una rutina primero',
-                          style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey),
-                        ),
-                      ],
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.search_off_rounded, size: 80, color: AppColors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'No hay rutinas disponibles',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.white,
                     ),
-                  )
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Crea una rutina primero',
+                    style: GoogleFonts.poppins(fontSize: 14, color: AppColors.grey),
+                  ),
+                ],
+              ),
+            )
                 : ListView.builder(
-                    itemCount: _availableRoutines.length,
-                    itemBuilder: (context, index) {
-                      final routine = _availableRoutines[index];
-                      final color = AppColors.pastelBlue; // Or a color based on category
-                      return Card(
-                        margin: EdgeInsets.only(bottom: 16),
-                        color: AppColors.cardBlack,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(color: color.withOpacity(0.2), width: 1),
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => _selectRoutine(routine),
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
-                            child: Row(
+              itemCount: _availableRoutines.length,
+              itemBuilder: (context, index) {
+                final routine = _availableRoutines[index];
+                final color = AppColors.pastelBlue;
+                return Card(
+                  margin: EdgeInsets.only(bottom: 16),
+                  color: AppColors.cardBlack,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(color: color.withOpacity(0.2), width: 1),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => _selectRoutine(routine),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: color.withOpacity(0.1),
+                            radius: 25,
+                            child: Icon(
+                              Icons.fitness_center_rounded,
+                              color: color,
+                              size: 24,
+                            ),
+                          ),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
-                                  backgroundColor: color.withOpacity(0.1),
-                                  radius: 25,
-                                  child: Icon(
-                                    Icons.fitness_center_rounded, // Replace with category icon if available
-                                    color: color,
-                                    size: 24,
+                                Text(
+                                  routine.nombre,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.white,
                                   ),
                                 ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        routine.nombre,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.white,
-                                        ),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        '${routine.ejercicioIds.length} ejercicios • ${routine.duracionEstimada} min',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14,
-                                          color: AppColors.grey,
-                                        ),
-                                      ),
-                                    ],
+                                SizedBox(height: 4),
+                                Text(
+                                  '${routine.ejercicioIds.length} ejercicios • ${routine.duracionEstimada} min',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: AppColors.grey,
                                   ),
                                 ),
-                                Icon(Icons.arrow_forward_ios_rounded, color: AppColors.grey),
                               ],
                             ),
                           ),
-                        ),
-                      );
-                    },
+                          Icon(Icons.arrow_forward_ios_rounded, color: AppColors.grey),
+                        ],
+                      ),
+                    ),
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -572,7 +742,10 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
           ),
           SizedBox(height: 40),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              await _saveWorkout(); // Guardar antes de salir
+              Navigator.pop(context);
+            },
             child: Text(
               'Finalizar',
               style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
@@ -784,8 +957,9 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
         SizedBox(width: 16),
         Expanded(
           child: ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               _restTimer?.cancel();
+              await _saveWorkout(); // Guardar progreso antes de terminar
               setState(() {
                 _currentPhase = WorkoutPhase.completed;
               });
@@ -812,7 +986,6 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     _waveController.dispose();
     _weightController.dispose();
     _repsController.dispose();
-
     super.dispose();
   }
 
@@ -862,7 +1035,192 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen>
     ),
   );
 }
+// Agregar estos métodos a tu clase _WorkoutSessionScreenState
 
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.white,
+              size: 24,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.poppins(
+                  color: AppColors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: EdgeInsets.all(16),
+        duration: Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: AppColors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showInfo(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              Icons.check_circle_outline_rounded,
+              color: AppColors.white,
+              size: 24,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.poppins(
+                  color: AppColors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.pastelGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: EdgeInsets.all(16),
+        duration: Duration(seconds: 3),
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: AppColors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+  }
+
+// Método adicional para mostrar diálogos más elaborados (opcional)
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardBlack,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                color: Colors.red.shade400,
+                size: 28,
+              ),
+              SizedBox(width: 12),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  color: AppColors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            message,
+            style: GoogleFonts.poppins(
+              color: AppColors.grey,
+              fontSize: 14,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Entendido',
+                style: GoogleFonts.poppins(
+                  color: AppColors.pastelBlue,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showInfoDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardBlack,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle_outline_rounded,
+                color: AppColors.pastelGreen,
+                size: 28,
+              ),
+              SizedBox(width: 12),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  color: AppColors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            message,
+            style: GoogleFonts.poppins(
+              color: AppColors.grey,
+              fontSize: 14,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Genial',
+                style: GoogleFonts.poppins(
+                  color: AppColors.pastelGreen,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 // ... [incluir métodos restantes como _buildMainTimer, _buildSetFeedbackCard, etc.]
 }
 

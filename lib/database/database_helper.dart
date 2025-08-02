@@ -8,6 +8,9 @@ import '../domain/user.dart';
 import '../domain/exercise.dart';
 import '../domain/rutina.dart';
 import '../domain/nutricion.dart';
+import '../domain/training.dart';
+import '../domain/performed_exercise.dart';
+import '../domain/user_record.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -48,7 +51,8 @@ class DatabaseHelper {
        name TEXT NOT NULL,
        weight REAL NOT NULL,
        height REAL NOT NULL,
-       age INTEGER NOT NULL  
+       age INTEGER NOT NULL,  
+       user_record TEXT 
      )
    ''');
     print('✅ Tabla users creada'); // 🔍 Debug
@@ -101,6 +105,52 @@ class DatabaseHelper {
    ''');
     print('✅ Tabla nutrition creada'); // 🔍 Debug
 
+    // 📝 🆕 Crear tabla de entrenamientos (trainings)
+    await db.execute('''
+     CREATE TABLE trainings(
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       rutina_id INTEGER,
+       date TEXT NOT NULL,
+       total_time REAL,
+       user_id INTEGER,
+       FOREIGN KEY (rutina_id) REFERENCES rutinas (id),
+       FOREIGN KEY (user_id) REFERENCES users (id)
+     )
+   ''');
+    print('✅ Tabla trainings creada');
+
+    // 📝 🆕 Crear tabla de ejercicios realizados (performed_exercises)
+    await db.execute('''
+     CREATE TABLE performed_exercises(
+       id TEXT PRIMARY KEY,
+       training_id INTEGER NOT NULL,
+       exercise_id INTEGER,
+       time REAL NOT NULL,
+       series INTEGER NOT NULL,
+       reps INTEGER NOT NULL,
+       weight REAL NOT NULL,
+       date TEXT NOT NULL,
+       FOREIGN KEY (training_id) REFERENCES trainings (id),
+       FOREIGN KEY (exercise_id) REFERENCES exercises (id)
+     )
+   ''');
+    print('✅ Tabla performed_exercises creada');
+
+    // 📝 🆕 Crear tabla de registros de usuario (user_records)
+    await db.execute('''
+     CREATE TABLE user_records(
+       id INTEGER PRIMARY KEY AUTOINCREMENT,
+       user_id INTEGER UNIQUE NOT NULL,
+       record TEXT NOT NULL,
+       record_dates TEXT NOT NULL,
+       total_training_days INTEGER NOT NULL DEFAULT 0,
+       consecutive_training_days INTEGER NOT NULL DEFAULT 0,
+       last_updated TEXT NOT NULL,
+       FOREIGN KEY (user_id) REFERENCES users (id)
+     )
+   ''');
+    print('✅ Tabla user_records creada');
+
     // 📝 Insertar datos predefinidos
     await _insertPredefinedExercises(db);
     await _insertPredefinedRoutines(db);
@@ -131,7 +181,8 @@ class DatabaseHelper {
          name TEXT NOT NULL,
          weight REAL NOT NULL,
          height REAL NOT NULL,
-         age INTEGER NOT NULL  
+         age INTEGER NOT NULL, 
+         user_record TEXT 
        )
       ''');
 
@@ -177,6 +228,48 @@ class DatabaseHelper {
        )
      ''');
 
+      // Crear nuevas tablas si no existen
+      await db.execute('''
+       CREATE TABLE IF NOT EXISTS trainings(
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         rutina_id INTEGER,
+         date TEXT NOT NULL,
+         total_time REAL,
+         user_id INTEGER,
+         FOREIGN KEY (rutina_id) REFERENCES rutinas (id),
+         FOREIGN KEY (user_id) REFERENCES users (id)
+       )
+     ''');
+
+      await db.execute('''
+       CREATE TABLE IF NOT EXISTS performed_exercises(
+         id TEXT PRIMARY KEY,
+         training_id INTEGER NOT NULL,
+         exercise_id INTEGER,
+         time REAL NOT NULL,
+         series INTEGER NOT NULL,
+         reps INTEGER NOT NULL,
+         weight REAL NOT NULL,
+         date TEXT NOT NULL,
+         FOREIGN KEY (training_id) REFERENCES trainings (id),
+         FOREIGN KEY (exercise_id) REFERENCES exercises (id)
+       )
+     ''');
+
+      await db.execute('''
+       CREATE TABLE IF NOT EXISTS user_records(
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         user_id INTEGER UNIQUE NOT NULL,
+         record TEXT NOT NULL,
+         record_dates TEXT NOT NULL,
+         total_training_days INTEGER NOT NULL DEFAULT 0,
+         consecutive_training_days INTEGER NOT NULL DEFAULT 0,
+         last_updated TEXT NOT NULL,
+         FOREIGN KEY (user_id) REFERENCES users (id)
+       )
+     ''');
+
+
       // 📝 Insertar datos predefinidos para upgrades
       await _insertPredefinedExercises(db);
       await _insertPredefinedRoutines(db);
@@ -213,6 +306,7 @@ class DatabaseHelper {
       weight: user.weight,
       height: user.height,
       age: user.age,
+      user_record: user.user_record,
     );
 
     return await db.insert('users', userWithHashedPassword.toMap());
@@ -537,24 +631,29 @@ class DatabaseHelper {
     print('✅ Insertadas $insertedCount rutinas predefinidas'); // 🔍 Debug
   }
 
-  // 📝 MÉTODO PARA LIMPIAR/RESETEAR BASE DE DATOS (útil para desarrollo)
+  // 📝 MÉTODO PARA LIMPIAR/RESETEAR BASE DE DATOS
   Future<void> resetDatabase() async {
     try {
-      print('🔄 Reseteando base de datos...'); // 🔍 Debug
+      print('🔄 Reseteando base de datos...');
       final db = await database;
 
-      // Eliminar todos los datos
+      // Eliminar todos los datos (en orden correcto por foreign keys)
+      await db.delete('performed_exercises');
+      await db.delete('trainings');
+      await db.delete('user_records');
       await db.delete('exercises');
       await db.delete('rutinas');
       await db.delete('users');
+      await db.delete('nutrition');
 
       // Reinsertar datos predefinidos
       await _insertPredefinedExercises(db);
       await _insertPredefinedRoutines(db);
+      await _insertPredefinedNutrition(db);
 
-      print('Base de datos reseteada correctamente'); // 🔍 Debug
+      print('✅ Base de datos reseteada correctamente');
     } catch (e) {
-      print(' Error reseteando base de datos: $e'); // 🔍 Debug
+      print('❌ Error reseteando base de datos: $e');
       rethrow;
     }
   }
@@ -576,14 +675,36 @@ class DatabaseHelper {
           await db.rawQuery('SELECT COUNT(*) FROM users')
       ) ?? 0;
 
+      final trainingCount = Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM trainings')
+      ) ?? 0;
+
+      final performedCount = Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM performed_exercises')
+      ) ?? 0;
+
+      final recordCount = Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM user_records')
+      ) ?? 0;
+
       return {
         'exercises': exerciseCount,
         'rutinas': rutinaCount,
         'users': userCount,
+        'trainings': trainingCount,
+        'performed_exercises': performedCount,
+        'user_records': recordCount,
       };
     } catch (e) {
-      print(' Error contando registros: $e'); // 🔍 Debug
-      return {'exercises': 0, 'rutinas': 0, 'users': 0};
+      print('❌ Error contando registros: $e');
+      return {
+        'exercises': 0,
+        'rutinas': 0,
+        'users': 0,
+        'trainings': 0,
+        'performed_exercises': 0,
+        'user_records': 0,
+      };
     }
   }
 
@@ -719,5 +840,291 @@ class DatabaseHelper {
     }
 
     print('✅ Insertados $insertedCount alimentos predefinidos');
+  }
+
+  // 📝 🆕 MÉTODOS DE ENTRENAMIENTOS (TRAININGS)
+  Future<int> insertTraining(Training training) async {
+    try {
+      print('💾 Guardando entrenamiento...');
+      final db = await database;
+
+      final trainingMap = {
+        'rutina_id': training.rutinaId,
+        'date': training.date.toIso8601String(),
+        'total_time': training.totalTime,
+        'user_id': null, // Puedes modificar esto si necesitas asociar con un usuario específico
+      };
+
+      final trainingId = await db.insert('trainings', trainingMap);
+      print('✅ Training guardado con ID: $trainingId');
+
+      // Guardar ejercicios realizados
+      for (var performedExercise in training.performedExercises) {
+        await _insertPerformedExercise(performedExercise, trainingId);
+      }
+
+      return trainingId;
+    } catch (e) {
+      print('❌ Error guardando entrenamiento: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _insertPerformedExercise(Performed_exercise performedExercise, int trainingId) async {
+    try {
+      final db = await database;
+      final performedMap = {
+        'id': performedExercise.id,
+        'training_id': trainingId,
+        'exercise_id': performedExercise.exerciseId,
+        'time': performedExercise.time,
+        'series': performedExercise.series,
+        'reps': performedExercise.reps,
+        'weight': performedExercise.weight,
+        'date': performedExercise.date.toIso8601String(),
+      };
+
+      await db.insert('performed_exercises', performedMap);
+      print('✅ Performed exercise guardado: ${performedExercise.id}');
+    } catch (e) {
+      print('❌ Error guardando performed exercise: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<Training>> getTrainingsByUser(int userId) async {
+    try {
+      print('📖 Cargando entrenamientos del usuario: $userId');
+      final db = await database;
+
+      final result = await db.query(
+        'trainings',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'date DESC',
+      );
+
+      List<Training> trainings = [];
+      for (var trainingMap in result) {
+        final performedExercises = await _getPerformedExercisesByTrainingId(trainingMap['id'] as int);
+
+        final training = Training(
+          id: trainingMap['id'] as int,
+          rutinaId: trainingMap['rutina_id'] as int?,
+          performedExercises: performedExercises,
+          date: DateTime.parse(trainingMap['date'] as String),
+          totalTime: (trainingMap['total_time'] as num?)?.toDouble(),
+        );
+
+        trainings.add(training);
+      }
+
+      print('✅ Encontrados ${trainings.length} entrenamientos');
+      return trainings;
+    } catch (e) {
+      print('❌ Error cargando entrenamientos: $e');
+      return [];
+    }
+  }
+
+  Future<List<Training>> getAllTrainings() async {
+    try {
+      print('📖 Cargando todos los entrenamientos...');
+      final db = await database;
+
+      final result = await db.query('trainings', orderBy: 'date DESC');
+
+      List<Training> trainings = [];
+      for (var trainingMap in result) {
+        final performedExercises = await _getPerformedExercisesByTrainingId(trainingMap['id'] as int);
+
+        final training = Training(
+          id: trainingMap['id'] as int,
+          rutinaId: trainingMap['rutina_id'] as int?,
+          performedExercises: performedExercises,
+          date: DateTime.parse(trainingMap['date'] as String),
+          totalTime: (trainingMap['total_time'] as num?)?.toDouble(),
+        );
+
+        trainings.add(training);
+      }
+
+      print('✅ Encontrados ${trainings.length} entrenamientos');
+      return trainings;
+    } catch (e) {
+      print('❌ Error cargando entrenamientos: $e');
+      return [];
+    }
+  }
+
+  Future<List<Performed_exercise>> _getPerformedExercisesByTrainingId(int trainingId) async {
+    try {
+      final db = await database;
+      final result = await db.query(
+        'performed_exercises',
+        where: 'training_id = ?',
+        whereArgs: [trainingId],
+      );
+
+      return result.map((map) => Performed_exercise(
+        id: map['id'] as String,
+        exerciseId: map['exercise_id'] as int?,
+        time: (map['time'] as num).toDouble(),
+        series: map['series'] as int,
+        reps: map['reps'] as int,
+        weight: (map['weight'] as num).toDouble(),
+        date: DateTime.parse(map['date'] as String),
+      )).toList();
+    } catch (e) {
+      print('❌ Error cargando performed exercises: $e');
+      return [];
+    }
+  }
+
+  Future<User> getUserById(int userId) async {
+    try {
+      print('📖 Cargando usuario con ID: $userId');
+      final db = await database;
+
+      final result = await db.query(
+        'users',
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+
+      if (result.isNotEmpty) {
+        return User.fromMap(result.first);
+      } else {
+        throw Exception('Usuario no encontrado');
+      }
+    } catch (e) {
+      print('❌ Error cargando usuario: $e');
+      rethrow;
+    }
+  }
+
+  Future<User> getUserByEmail(String email) async {
+    try {
+      print('📖 Cargando usuario con email: $email');
+      final db = await database;
+
+      final result = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: [email],
+      );
+
+      if (result.isNotEmpty) {
+        return User.fromMap(result.first);
+      } else {
+        throw Exception('Usuario no encontrado');
+      }
+    } catch (e) {
+      print('❌ Error cargando usuario por email: $e');
+      rethrow;
+    }
+  }
+
+  // 📝 🆕 MÉTODOS DE REGISTROS DE USUARIO (USER_RECORDS)
+  Future<User_record?> getUserRecord(int userId) async {
+    try {
+      print('📖 Cargando registro del usuario: $userId');
+      final db = await database;
+
+      final result = await db.query(
+        'user_records',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+
+      if (result.isNotEmpty) {
+        final map = result.first;
+
+        // Parsear la lista de records (IDs de rutinas)
+        List<int> record = [];
+        try {
+          final recordJson = map['record'] as String;
+          final recordList = jsonDecode(recordJson) as List;
+          record = recordList.map((item) => item as int).toList();
+        } catch (e) {
+          print('⚠️ Error parseando record: $e');
+        }
+
+        // Parsear las fechas
+        List<DateTime> recordDates = [];
+        try {
+          final datesJson = map['record_dates'] as String;
+          final datesList = jsonDecode(datesJson) as List;
+          recordDates = datesList.map((dateStr) => DateTime.parse(dateStr as String)).toList();
+        } catch (e) {
+          print('⚠️ Error parseando fechas: $e');
+        }
+
+        return User_record(
+          record: record,
+          recordDates: recordDates,
+          totalTrainingDays: map['total_training_days'] as int,
+          consecutiveTrainingDays: map['consecutive_training_days'] as int,
+        );
+      }
+
+      return null;
+    } catch (e) {
+      print('❌ Error cargando registro de usuario: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateUserRecord(int userId, User_record userRecord) async {
+    try {
+      print('🔄 Actualizando registro del usuario: $userId');
+      final db = await database;
+
+      final recordMap = {
+        'user_id': userId,
+        'record': jsonEncode(userRecord.record),
+        'record_dates': jsonEncode(userRecord.recordDates.map((date) => date.toIso8601String()).toList()),
+        'total_training_days': userRecord.totalTrainingDays,
+        'consecutive_training_days': userRecord.consecutiveTrainingDays,
+        'last_updated': DateTime.now().toIso8601String(),
+      };
+
+      // Intentar actualizar primero
+      final updateCount = await db.update(
+        'user_records',
+        recordMap,
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+
+      // Si no se actualizó ningún registro, insertar uno nuevo
+      if (updateCount == 0) {
+        await db.insert('user_records', recordMap);
+        print('✅ Nuevo registro de usuario creado');
+      } else {
+        print('✅ Registro de usuario actualizado');
+      }
+    } catch (e) {
+      print('❌ Error actualizando registro de usuario: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteTraining(int trainingId) async {
+    try {
+      print('🗑️ Eliminando entrenamiento con ID: $trainingId');
+      final db = await database;
+
+      // Eliminar ejercicios realizados primero (por foreign key)
+      await db.delete('performed_exercises', where: 'training_id = ?', whereArgs: [trainingId]);
+
+      // Eliminar el entrenamiento
+      await db.delete('trainings', where: 'id = ?', whereArgs: [trainingId]);
+
+      print('✅ Entrenamiento eliminado');
+    } catch (e) {
+      print('❌ Error eliminando entrenamiento: $e');
+      rethrow;
+    }
   }
 }

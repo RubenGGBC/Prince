@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import '../domain/user.dart';
 
 class MLSimple extends StatefulWidget {
+
+  final User user;
+
+  MLSimple({Key? key, required this.user}) : super(key: key);
+
   @override
   _MLSimpleState createState() => _MLSimpleState();
 }

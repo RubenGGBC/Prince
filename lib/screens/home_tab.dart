@@ -71,13 +71,15 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   @override
+  // 📱 PAGEVIEW INTERNO CON USER PROPAGADO A TODAS LAS CLASES
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primaryBlack,
       body: SafeArea(
         child: Stack(
           children: [
-            // 📱 PAGEVIEW INTERNO (Home <-> Chat IA)
+            // 📱 PAGEVIEW INTERNO CON USER PROPAGADO A TODAS LAS CLASES
             PageView(
               controller: _internalPageController,
               onPageChanged: (index) {
@@ -86,24 +88,24 @@ class _HomeTabState extends State<HomeTab> {
                 });
               },
               children: [
-                // 🏠 PÁGINA 0: CONTENIDO DEL HOME (sin botón IA)
+                // 🏠 PÁGINA 0: CONTENIDO DEL HOME
                 _buildHomePage(),
 
-                // 🤖 PÁGINA 1: CHAT CON PRINCE IA
-                PrinceAIChatScreen(),
+                // 🤖 PÁGINA 1: CHAT CON PRINCE IA (CON USER)
+                PrinceAIChatScreen(user: widget.user),
 
-                // PÁGINA 2: PROGRESO
+                // 📊 PÁGINA 2: PROGRESO (YA TIENE USER)
                 ProgressTab(user: widget.user),
 
-                // 🥗 PÁGINA 3: NUTRICIÓN
+                // 🥗 PÁGINA 3: NUTRICIÓN (YA TIENE USER)
                 NutritionTab(user: widget.user),
 
-                // PÁGINA 4: PERFIL
+                // 👤 PÁGINA 4: PERFIL (BUILT-IN CON USER)
                 _buildProfilePage(),
               ],
             ),
 
-            // 📍 INDICADOR DE PÁGINA (solo si estamos en la página principal)
+            // 📍 INDICADOR DE PÁGINA
             if (_internalPageIndex == 0)
               Positioned(
                 top: 20,
@@ -847,9 +849,14 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // 🧭 MÉTODOS DE NAVEGACIÓN (mantener iguales)
+  // 🧭 MÉTODOS DE NAVEGACIÓN CON USER PROPAGADO
   void _navigateToCreateRoutine() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => CrearRutinaScreen()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CrearRutinaScreen(user: widget.user), // ← PASAR USER
+      ),
+    );
   }
 
   void _showEditRoutineOptions() {
@@ -885,15 +892,30 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   void _navigateToExercises() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => ExercisesTab()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExercisesTab(user: widget.user), // ← PASAR USER
+      ),
+    );
   }
 
   void _navigateToMLKit() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => MLSimple()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MLSimple(user: widget.user), // ← PASAR USER
+      ),
+    );
   }
 
   void _startWorkoutSession() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => WorkoutSessionScreen()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WorkoutSessionScreen(user: widget.user), // ← PASAR USER
+      ),
+    );
   }
 
   // 👤 PÁGINA DE PERFIL

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:untitled2/domain/user_record.dart';
 import '../utils/app_colors.dart';
 import '../domain/user.dart';
 import 'home_tab.dart';
@@ -9,9 +10,9 @@ import 'progress_tab.dart';
 import 'profile_tab.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final User? user;
+  final User user;
 
-  const DashboardScreen({Key? key, this.user}) : super(key: key);
+  const DashboardScreen({Key? key, required this.user}) : super(key: key);
 
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
@@ -32,13 +33,19 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
       weight: 70.0,
       height: 170.0,
       age: 25,
+      user_record: User_record(
+        record: [],
+        totalTrainingDays: 0,
+        consecutiveTrainingDays: 0,
+        recordDates: [],
+      ),
     );
 
     return [
-      HomeTab(user: widget.user ?? defaultUser),
-      ExercisesTab(),
-      NutritionTab(),
-      ProgressTab(user: widget.user ?? defaultUser),
+      HomeTab(user: widget.user),
+      ExercisesTab(user: widget.user),
+      NutritionTab(user: widget.user),
+      ProgressTab(user: widget.user),
       ProfileTab(),
     ];
   }

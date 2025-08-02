@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
 import '../domain/user.dart';
 import '../database/database_helper.dart';
+import '../domain/user_record.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -46,6 +47,12 @@ class _RegisterScreenState extends State<RegisterScreen>
           weight: double.tryParse(_weightController.text) ?? 0.0,
           height: double.tryParse(_heightController.text) ?? 0.0,
           age: int.tryParse(_ageController.text) ?? 0,
+          user_record: User_record(
+            record: new List<int>.empty(growable: true),
+            totalTrainingDays: 0,
+            consecutiveTrainingDays: 0,
+            recordDates: new List<DateTime>.empty(growable: true),
+          ),
         );
 
         await _dbHelper.registerUser(user);

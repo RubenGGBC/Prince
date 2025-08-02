@@ -3,8 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import '../utils/app_colors.dart';
 import '../domain/exercise.dart';
 import '../database/database_helper.dart';
+import '../domain/user.dart';
 
 class ExercisesTab extends StatefulWidget {
+
+  final User user;
+
+  const ExercisesTab({Key? key, required this.user}) : super(key: key);
+
   @override
   _ExercisesTabState createState() => _ExercisesTabState();
 }

@@ -4,8 +4,12 @@ import '../utils/app_colors.dart';
 import '../domain/exercise.dart';
 import '../domain/rutina.dart';
 import '../database/database_helper.dart';
+import '../domain/user.dart';
 
 class CrearRutinaScreen extends StatefulWidget {
+  final User user;
+
+  const CrearRutinaScreen({Key? key, required this.user}) : super(key: key);
   @override
   _CrearRutinaScreenState createState() => _CrearRutinaScreenState();
 }
